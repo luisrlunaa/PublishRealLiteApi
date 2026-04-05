@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using PublishRealLiteApi.Data;
-using PublishRealLiteApi.Models;
+using PublishRealLiteApi.Infrastructure;
+using PublishRealLiteApi.Infrastructure.Data;
 using PublishRealLiteApi.Services;
 using PublishRealLiteApi.Services.Interfaces;
 using Scalar.AspNetCore;
@@ -11,42 +11,22 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// -----------------------------
-// Configuration helpers
-// -----------------------------
-var configuration = builder.Configuration;
+// Core services
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApi();
+builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
-// -----------------------------
-// Database
-// -----------------------------
-builder.Services.AddDbContext<AppDbContext>(options =>
-{
-    var conn = configuration.GetConnectionString("DefaultConnection");
-    options.UseSqlServer(conn, sql =>
-    {
-        sql.EnableRetryOnFailure();
-    });
-});
+// Infrastructure (DbContext, Identity, repos, health checks)
+builder.Services.AddInfrastructure(builder.Configuration);
 
-// -----------------------------
-// Identity
-// -----------------------------
-builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
-{
-    options.Password.RequireDigit = true;
-    options.Password.RequireLowercase = true;
-    options.Password.RequireUppercase = false;
-    options.Password.RequireNonAlphanumeric = false;
-    options.Password.RequiredLength = 8;
-    options.User.RequireUniqueEmail = true;
-})
-.AddEntityFrameworkStores<AppDbContext>()
-.AddDefaultTokenProviders();
+// Servicios propios de API
+builder.Services.AddScoped<IJwtService, JwtService>();
+builder.Services.AddScoped<IUploadService, LocalUploadService>();
+builder.Services.AddScoped<SimpleRateLimitMiddleware>();
 
-// -----------------------------
 // JWT Authentication
-// -----------------------------
-var jwtSection = configuration.GetSection("JwtSettings");
+var jwtSection = builder.Configuration.GetSection("JwtSettings");
 var jwtSecret = jwtSection.GetValue<string>("Secret") ?? throw new InvalidOperationException("JwtSettings:Secret is not configured");
 var issuer = jwtSection.GetValue<string>("Issuer") ?? "PublishRealLite";
 var audience = jwtSection.GetValue<string>("Audience") ?? "PublishRealLiteUsers";
@@ -75,9 +55,7 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// -----------------------------
 // CORS
-// -----------------------------
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("FrontendDev", policy =>
@@ -92,52 +70,18 @@ builder.Services.AddCors(options =>
     });
 });
 
-// -----------------------------
-// Controllers, OpenAPI, Scalar UI, HealthChecks
-// -----------------------------
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddOpenApi(); // native OpenAPI registration (Microsoft.AspNetCore.OpenApi) 
-builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("Database");
-
-// -----------------------------
-// Application services (DI)
-// -----------------------------
-builder.Services.AddScoped<IUploadService, LocalUploadService>();
-builder.Services.AddScoped<IStatsService, StatsService>();
-builder.Services.AddScoped<ITeamService, TeamService>();
-builder.Services.AddScoped<Microsoft.AspNetCore.Identity.UI.Services.IEmailSender, PublishRealLiteApi.Services.NullEmailSender>();
-builder.Services.AddScoped<DatabaseHealthCheck>();
-
-
-// Register other app services you implemented
-// builder.Services.AddScoped<IReleaseService, ReleaseService>();
-// builder.Services.AddScoped<IVideoService, VideoService>();
-
-// -----------------------------
-// Simple in-memory rate limiting middleware registration
-// -----------------------------
+// Rate limiting and memory cache
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<SimpleRateLimitMiddleware>();
 
-// -----------------------------
-// Build app
-// -----------------------------
 var app = builder.Build();
 
-// -----------------------------
 // Middleware pipeline
-// -----------------------------
-app.UseStaticFiles(); // serve wwwroot/uploads for images
-
+app.UseStaticFiles();
 app.UseRouting();
-
 app.UseCors("FrontendDev");
-
 app.UseAuthentication();
 app.UseAuthorization();
-
-// Simple rate limiting middleware (global)
 app.UseMiddleware<SimpleRateLimitMiddleware>();
 
 // OpenAPI + Scalar UI
@@ -148,26 +92,29 @@ app.MapScalarApiReference(options =>
     options.Theme = ScalarTheme.DeepSpace;
 });
 
-// Optional: redirect root to Scalar UI
 app.MapGet("/", context =>
 {
     context.Response.Redirect("/scalar/v1");
     return Task.CompletedTask;
 });
 
-// Controllers and health
-app.MapControllers();
+// Health endpoints
 app.MapHealthChecks("/health");
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = r => r.Tags.Contains("ready")
+});
 
-// -----------------------------
+app.MapControllers();
+
 // Database migration + seeding at startup
-// -----------------------------
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     try
     {
         var db = services.GetRequiredService<AppDbContext>();
+
         // Apply pending migrations
         db.Database.Migrate();
 
@@ -176,10 +123,9 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
+        // Log minimal startup error
+        Console.WriteLine("Startup migration/seeding error: " + ex);
     }
 }
 
-// -----------------------------
-// Run
-// -----------------------------
 app.Run();

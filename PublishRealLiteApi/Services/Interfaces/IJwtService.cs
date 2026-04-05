@@ -1,4 +1,4 @@
-﻿using PublishRealLiteApi.Models;
+﻿using PublishRealLiteApi.Infrastructure.Identity;
 
 namespace PublishRealLiteApi.Services.Interfaces
 {

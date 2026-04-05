@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using PublishRealLiteApi.DTOs;
-using PublishRealLiteApi.Models;
+using PublishRealLiteApi.Infrastructure.Identity;
 using PublishRealLiteApi.Services.Interfaces;
 
 namespace PublishRealLiteApi.Controllers

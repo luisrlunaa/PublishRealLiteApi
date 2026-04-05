@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using PublishRealLiteApi.Data;
-using PublishRealLiteApi.Services.Interfaces;
+using PublishRealLiteApi.Application.Services.Interfaces;
+using PublishRealLiteApi.Infrastructure.Data;
 using System.Security.Claims;
 
 namespace PublishRealLiteApi.Controllers

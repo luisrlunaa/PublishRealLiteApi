@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
 	<PropertyGroup>
 		<TargetFramework>net10.0</TargetFramework>
@@ -17,6 +17,11 @@
 		<PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.5" />
 		<PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.5" />
 		<PackageReference Include="Scalar.AspNetCore" Version="1.2.32" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\PublishRealLiteApi.Application\PublishRealLiteApi.Application.csproj" />
+		<ProjectReference Include="..\PublishRealLiteApi.Infrastructure\PublishRealLiteApi.Infrastructure.csproj" />
 	</ItemGroup>
 
 </Project>

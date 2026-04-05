@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using PublishRealLiteApi.Data;
 using PublishRealLiteApi.DTOs;
+using PublishRealLiteApi.Infrastructure.Data;
 using PublishRealLiteApi.Models;
 using PublishRealLiteApi.Services.Interfaces;
 using System.Security.Claims;

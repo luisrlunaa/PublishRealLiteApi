@@ -1,5 +1,5 @@
 ﻿using Microsoft.IdentityModel.Tokens;
-using PublishRealLiteApi.Models;
+using PublishRealLiteApi.Infrastructure.Identity;
 using PublishRealLiteApi.Services.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;

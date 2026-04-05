@@ -1,3 +1,6 @@
 <Solution>
+  <Project Path="PublishRealLiteApi.Application/PublishRealLiteApi.Application.csproj" />
+  <Project Path="PublishRealLiteApi.Infrastructure/PublishRealLiteApi.Infrastructure.csproj" />
+  <Project Path="PublishRealLiteApi.Models/PublishRealLiteApi.Models.csproj" />
   <Project Path="PublishRealLiteApi/PublishRealLiteApi.csproj" />
 </Solution>
