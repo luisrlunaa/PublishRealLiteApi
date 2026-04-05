@@ -4,7 +4,7 @@
     {
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        public Guid ArtistProfileId { get; set; }
+        public int ArtistProfileId { get; set; }
         public ArtistProfile? ArtistProfile { get; set; }
 
         public string Title { get; set; } = string.Empty;
@@ -17,6 +17,9 @@
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        public string? CoverImageUrl { get; set; }
+        public string Status { get; set; } = "Published"; // Draft, Pending, Published
 
         public List<Track> Tracks { get; set; } = new();
     }

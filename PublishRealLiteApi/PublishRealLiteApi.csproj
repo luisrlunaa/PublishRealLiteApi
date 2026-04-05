@@ -19,12 +19,4 @@
 		<PackageReference Include="Scalar.AspNetCore" Version="1.2.32" />
 	</ItemGroup>
 
-	<ItemGroup>
-		<Folder Include="Data\" />
-		<Folder Include="Models\" />
-		<Folder Include="Controllers\" />
-		<Folder Include="DTOs\" />
-		<Folder Include="Services\" />
-	</ItemGroup>
-
 </Project>

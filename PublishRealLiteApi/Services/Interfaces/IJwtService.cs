@@ -1,6 +1,6 @@
 ﻿using PublishRealLiteApi.Models;
 
-namespace PublishRealLiteApi.Services
+namespace PublishRealLiteApi.Services.Interfaces
 {
     public interface IJwtService
     {

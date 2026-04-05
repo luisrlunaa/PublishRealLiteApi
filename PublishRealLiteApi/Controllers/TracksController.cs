@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
 using PublishRealLiteApi.Data;
-using PublishRealLiteApi.Models;
 using PublishRealLiteApi.DTOs;
+using PublishRealLiteApi.Models;
 
 namespace PublishRealLiteApi.Controllers
 {

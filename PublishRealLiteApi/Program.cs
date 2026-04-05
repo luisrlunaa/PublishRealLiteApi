@@ -5,101 +5,63 @@ using Microsoft.IdentityModel.Tokens;
 using PublishRealLiteApi.Data;
 using PublishRealLiteApi.Models;
 using PublishRealLiteApi.Services;
-using Microsoft.Win32;
-using System.Text;
+using PublishRealLiteApi.Services.Interfaces;
 using Scalar.AspNetCore;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// -----------------------------
+// Configuration helpers
+// -----------------------------
 var configuration = builder.Configuration;
 
-// ---------------------------------------------------------
-// ADVANCED SQL SERVER INSTANCE DETECTOR (NOT WMI)
-// ---------------------------------------------------------
-string DetectSqlServerInstance()
-{
-    var instances = new List<string>();
-
-    // 1. Read instances from the registry 
-    try
-    {
-        using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL");
-        if (key != null)
-        {
-            foreach (var name in key.GetValueNames())
-            {
-                if (name == "MSSQLSERVER")
-                    instances.Add(".");
-                else
-                    instances.Add($".\\{name}");
-            }
-        }
-    }
-    catch { }
-
-    // 2. Common Instances 
-    var fallback = new[]
-    {
-".", "localhost", "(local)",
-".\\SQLEXPRESS",
-$"{Environment.MachineName}",
-$"{Environment.MachineName}\\SQLEXPRESS"
-};
-
-    instances.AddRange(fallback);
-
-    // 3. Test each instance 
-    foreach (var server in instances.Distinct())
-    {
-        try
-        {
-            var testConn = $"Server={server};Database=master;Trusted_Connection=True;TrustServerCertificate=True;";
-            using var conn = new Microsoft.Data.SqlClient.SqlConnection(testConn);
-            conn.Open();
-            return server;
-        }
-        catch { }
-    }
-
-    throw new Exception("No valid SQL Server instance found.");
-}
-
-string BuildDynamicConnectionString()
-{
-    var baseConn = configuration.GetConnectionString("DefaultConnection");
-
-    if (!baseConn.Contains("Server=DYNAMIC"))
-        throw new Exception("The connection string must contain 'Server=DYNAMIC'.");
-
-    var server = DetectSqlServerInstance();
-    return baseConn.Replace("Server=DYNAMIC", $"Server={server}");
-}
-
-var finalConnectionString = BuildDynamicConnectionString();
-
-// ---------------------------------------------------------
-// DATABASE + IDENTITY + JWT CONFIG
-// ---------------------------------------------------------
+// -----------------------------
+// Database
+// -----------------------------
 builder.Services.AddDbContext<AppDbContext>(options =>
-options.UseSqlServer(finalConnectionString));
+{
+    var conn = configuration.GetConnectionString("DefaultConnection");
+    options.UseSqlServer(conn, sql =>
+    {
+        sql.EnableRetryOnFailure();
+    });
+});
 
+// -----------------------------
+// Identity
+// -----------------------------
 builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit = true;
-    options.Password.RequiredLength = 8;
+    options.Password.RequireLowercase = true;
+    options.Password.RequireUppercase = false;
     options.Password.RequireNonAlphanumeric = false;
+    options.Password.RequiredLength = 8;
     options.User.RequireUniqueEmail = true;
 })
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
+// -----------------------------
+// JWT Authentication
+// -----------------------------
 var jwtSection = configuration.GetSection("JwtSettings");
-var secret = jwtSection.GetValue<string>("Secret")!;
-var issuer = jwtSection.GetValue<string>("Issuer")!;
-var audience = jwtSection.GetValue<string>("Audience")!;
+var jwtSecret = jwtSection.GetValue<string>("Secret") ?? throw new InvalidOperationException("JwtSettings:Secret is not configured");
+var issuer = jwtSection.GetValue<string>("Issuer") ?? "PublishRealLite";
+var audience = jwtSection.GetValue<string>("Audience") ?? "PublishRealLiteUsers";
 
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret));
+
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
 .AddJwtBearer(options =>
 {
+    options.RequireHttpsMetadata = true;
+    options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
     {
         ValidateIssuer = true,
@@ -107,64 +69,117 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         ValidateAudience = true,
         ValidAudience = audience,
         ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret)),
-        ValidateLifetime = true
+        IssuerSigningKey = key,
+        ValidateLifetime = true,
+        ClockSkew = TimeSpan.FromMinutes(2)
     };
 });
 
-builder.Services.AddOpenApi(); // ✔️ Native OpenAPI
-builder.Services.AddControllers();
+// -----------------------------
+// CORS
+// -----------------------------
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("DevCors", policy =>
+    options.AddPolicy("FrontendDev", policy =>
     {
-        policy.AllowAnyHeader().AllowAnyMethod()
-        .WithOrigins("http://localhost:5173", "http://localhost:3000")
-        .AllowCredentials();
+        policy.WithOrigins(
+                "http://localhost:5173",
+                "http://localhost:3000",
+                "https://your-frontend-domain.com")
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
+// -----------------------------
+// Controllers, OpenAPI, Scalar UI, HealthChecks
+// -----------------------------
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddOpenApi(); // native OpenAPI registration (Microsoft.AspNetCore.OpenApi) 
+builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("Database");
+
+// -----------------------------
+// Application services (DI)
+// -----------------------------
+builder.Services.AddScoped<IUploadService, LocalUploadService>();
+builder.Services.AddScoped<IStatsService, StatsService>();
+builder.Services.AddScoped<ITeamService, TeamService>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Identity.UI.Services.IEmailSender, PublishRealLiteApi.Services.NullEmailSender>();
+builder.Services.AddScoped<DatabaseHealthCheck>();
+
+
+// Register other app services you implemented
+// builder.Services.AddScoped<IReleaseService, ReleaseService>();
+// builder.Services.AddScoped<IVideoService, VideoService>();
+
+// -----------------------------
+// Simple in-memory rate limiting middleware registration
+// -----------------------------
+builder.Services.AddMemoryCache();
+builder.Services.AddSingleton<SimpleRateLimitMiddleware>();
+
+// -----------------------------
+// Build app
+// -----------------------------
 var app = builder.Build();
 
-// ---------------------------------------------------------
-// AUTO DB CREATION + MIGRATIONS + SEED
-// ---------------------------------------------------------
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
+// -----------------------------
+// Middleware pipeline
+// -----------------------------
+app.UseStaticFiles(); // serve wwwroot/uploads for images
 
-    try
-    {
-        var db = services.GetRequiredService<AppDbContext>();
+app.UseRouting();
 
-        if (!db.Database.CanConnect())
-            db.Database.EnsureCreated();
+app.UseCors("FrontendDev");
 
-        db.Database.Migrate();
+app.UseAuthentication();
+app.UseAuthorization();
 
-        await DbSeeder.SeedAsync(services);
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Error initializing database");
-        throw;
-    }
-}
+// Simple rate limiting middleware (global)
+app.UseMiddleware<SimpleRateLimitMiddleware>();
 
-// OpenAPI JSON
+// OpenAPI + Scalar UI
 app.MapOpenApi();
-
-// Scalar UI
 app.MapScalarApiReference(options =>
 {
     options.Title = "PublishRealLite API";
     options.Theme = ScalarTheme.DeepSpace;
 });
 
-app.UseHttpsRedirection();
-app.UseCors("DevCors");
-app.UseAuthentication();
-app.UseAuthorization();
+// Optional: redirect root to Scalar UI
+app.MapGet("/", context =>
+{
+    context.Response.Redirect("/scalar/v1");
+    return Task.CompletedTask;
+});
+
+// Controllers and health
 app.MapControllers();
+app.MapHealthChecks("/health");
+
+// -----------------------------
+// Database migration + seeding at startup
+// -----------------------------
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var db = services.GetRequiredService<AppDbContext>();
+        // Apply pending migrations
+        db.Database.Migrate();
+
+        // Seed initial data (roles, admin, demo artist, optional demo stats)
+        await DbSeeder.SeedAsync(services);
+    }
+    catch (Exception ex)
+    {
+    }
+}
+
+// -----------------------------
+// Run
+// -----------------------------
 app.Run();

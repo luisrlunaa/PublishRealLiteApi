@@ -2,7 +2,7 @@
 {
     public record ReleaseDto(
         Guid Id,
-        Guid ArtistProfileId,
+        int ArtistProfileId,
         string Title,
         DateTime? ReleaseDate,
         string? Genre,

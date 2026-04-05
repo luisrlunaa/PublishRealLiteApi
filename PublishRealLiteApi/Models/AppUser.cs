@@ -6,5 +6,6 @@ namespace PublishRealLiteApi.Models
     public class AppUser : IdentityUser
     {
         // Additional user properties can be added here
+        public ArtistProfile? ArtistProfile { get; set; }
     }
 }

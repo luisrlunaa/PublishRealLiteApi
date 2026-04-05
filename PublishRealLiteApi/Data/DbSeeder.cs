@@ -71,6 +71,28 @@ namespace PublishRealLiteApi.Data
                     db.Tracks.Add(new Track { Release = release, Position = 1, Title = "Track 1" });
                     db.Tracks.Add(new Track { Release = release, Position = 2, Title = "Track 2" });
 
+                    db.StreamStats.AddRange(new[]
+                    {
+                        new StreamStat
+                        {
+                            Date = DateTime.UtcNow.Date.AddDays(-1),
+                            Platform = "Spotify",
+                            Country = "US",
+                            Streams = 120,
+                            MetricType = "streams",
+                            Source = "playlist"
+                        },
+                        new StreamStat
+                        {
+                            Date = DateTime.UtcNow.Date.AddDays(-1),
+                            Platform = "Spotify",
+                            Country = "MX",
+                            Streams = 45,
+                            MetricType = "streams",
+                            Source = "radio"
+                        }
+                    });
+
                     await db.SaveChangesAsync();
                 }
             }

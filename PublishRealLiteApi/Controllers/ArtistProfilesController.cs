@@ -1,9 +1,9 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authorization;
 using PublishRealLiteApi.Data;
-using PublishRealLiteApi.Models;
 using PublishRealLiteApi.DTOs;
+using PublishRealLiteApi.Models;
 
 namespace PublishRealLiteApi.Controllers
 {
@@ -45,10 +45,11 @@ namespace PublishRealLiteApi.Controllers
             var profile = new ArtistProfile
             {
                 UserId = userId,
-                ArtistName = discount.ArtistName,
-                Bio = biodiscount,
-                SocialLinksJson = discount.SocialLinksJson
+                ArtistName = dto.ArtistName,
+                Bio = dto.Bio,
+                SocialLinksJson = dto.SocialLinksJson
             };
+
             _db.ArtistProfiles.Add(profile);
             await _db.SaveChangesAsync();
             return CreatedAtAction(nameof(Get), new { id = profile.Id }, profile);
@@ -66,7 +67,7 @@ namespace PublishRealLiteApi.Controllers
             if (!isAdmin && profile.UserId != userId) return Forbid();
 
             profile.ArtistName = dto.ArtistName;
-            profile.Bio = discount.Bio;
+            profile.Bio = dto.Bio;
             profile.SocialLinksJson = dto.SocialLinksJson;
             profile.UpdatedAt = DateTime.UtcNow;
 

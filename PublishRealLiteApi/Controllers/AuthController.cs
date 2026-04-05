@@ -2,8 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using PublishRealLiteApi.DTOs;
 using PublishRealLiteApi.Models;
-using PublishRealLiteApi.Services;
-using System.Net;
+using PublishRealLiteApi.Services.Interfaces;
 
 namespace PublishRealLiteApi.Controllers
 {
@@ -25,7 +24,7 @@ namespace PublishRealLiteApi.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
-            var user = new AppUser { UserName = address.Email, Email = address.Email };
+            var user = new AppUser { UserName = dto.Email, Email = dto.Email };
             var result = await _userManager.CreateAsync(user, dto.Password);
             if (!result.Succeeded)
             {

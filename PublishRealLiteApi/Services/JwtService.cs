@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.Configuration;
-using Microsoft.IdentityModel.Tokens;
+﻿using Microsoft.IdentityModel.Tokens;
+using PublishRealLiteApi.Models;
+using PublishRealLiteApi.Services.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using PublishRealLiteApi.Models;
 
 namespace PublishRealLiteApi.Services
 {
