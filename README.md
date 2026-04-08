@@ -1,19 +1,29 @@
 # 🎵 PublishReal  
-La plataforma que empodera a los artistas independientes.
-
-PublishReal es una solución moderna diseñada para centralizar todo lo que un artista necesita para gestionar su carrera musical. Combina herramientas profesionales en un solo ecosistema, eliminando la fragmentación entre múltiples plataformas.
+La plataforma que empodera a los artistas independientes.  
+The platform that empowers independent artists.
 
 ---
 
-## 🌟 Visión
+# 🌐 Bilingual Overview / Resumen Bilingüe
+
+<details>
+<summary><strong>🇪🇸 Español</strong></summary>
+
+## 🎵 PublishReal  
+PublishReal es una plataforma moderna diseñada para centralizar todo lo que un artista independiente necesita para gestionar su carrera musical.  
+Combina herramientas profesionales en un solo ecosistema, eliminando la necesidad de usar múltiples plataformas desconectadas.
+
+---
+
+## 🌟 Visión  
 Crear un espacio donde cualquier artista —sin importar su nivel o presupuesto— pueda administrar su identidad, su música, su equipo y sus estadísticas desde un solo panel intuitivo y profesional.
 
-PublishReal busca democratizar herramientas que antes solo estaban disponibles para sellos grandes.
+PublishReal busca democratizar herramientas que antes solo estaban disponibles para grandes sellos.
 
 ---
 
-## 🚀 ¿Qué es PublishReal?
-PublishReal es una plataforma integral que permite a los artistas:
+## 🚀 ¿Qué es PublishReal?  
+PublishReal permite a los artistas:
 
 - Gestionar su perfil profesional  
 - Administrar su catálogo musical  
@@ -28,7 +38,7 @@ Todo desde un solo lugar.
 
 # 🎧 Funcionalidades Principales
 
-## 🎤 Perfil Artístico
+## 🎤 Perfil Artístico  
 Un espacio profesional donde el artista controla su identidad:
 
 - Foto, biografía y redes  
@@ -38,7 +48,7 @@ Un espacio profesional donde el artista controla su identidad:
 
 ---
 
-## 🎼 Música (Releases & Tracks)
+## 🎼 Música (Releases & Tracks)  
 Un módulo inspirado en plataformas como DistroKid:
 
 - Crear lanzamientos  
@@ -48,7 +58,7 @@ Un módulo inspirado en plataformas como DistroKid:
 
 ---
 
-## 🎬 Videos Promocionales
+## 🎬 Videos Promocionales  
 Ideal para campañas y contenido social:
 
 - Subida de clips, reels y trailers  
@@ -57,7 +67,7 @@ Ideal para campañas y contenido social:
 
 ---
 
-## 📊 Estadísticas de Streams
+## 📊 Estadísticas de Streams  
 Un panel tipo *Spotify for Artists*:
 
 - Streams por plataforma  
@@ -67,7 +77,7 @@ Un panel tipo *Spotify for Artists*:
 
 ---
 
-## 👥 Equipos y Colaboradores
+## 👥 Equipos y Colaboradores  
 Gestión profesional del equipo del artista:
 
 - Invitaciones por rol  
@@ -77,7 +87,7 @@ Gestión profesional del equipo del artista:
 
 ---
 
-# 🧩 Arquitectura del Sistema
+# 🧩 Arquitectura del Sistema  
 El backend está construido con:
 
 - ASP.NET Core 10  
@@ -87,15 +97,9 @@ El backend está construido con:
 - Controladores REST  
 - Documentación interactiva con Swagger/Scalar  
 
-Diseñado para escalar y soportar:
-
-- Miles de artistas  
-- Millones de estadísticas  
-- Integraciones externas  
-
 ---
 
-# 🧭 Roadmap de Futuras Funcionalidades
+# 🧭 Roadmap  
 PublishReal evolucionará hacia un ecosistema completo:
 
 - Distribución musical  
@@ -107,7 +111,7 @@ PublishReal evolucionará hacia un ecosistema completo:
 
 ---
 
-# 🏁 Estado Actual del Proyecto
+# 🏁 Estado Actual  
 El backend ya incluye:
 
 - Autenticación completa  
@@ -118,11 +122,9 @@ El backend ya incluye:
 - Estadísticas  
 - Arquitectura escalable lista para producción  
 
-El frontend está en desarrollo para ofrecer una experiencia tipo dashboard profesional.
-
 ---
 
-# 🤝 ¿Para quién es PublishReal?
+# 🤝 ¿Para quién es PublishReal?  
 - Artistas independientes  
 - Managers  
 - Productores  
@@ -132,6 +134,144 @@ El frontend está en desarrollo para ofrecer una experiencia tipo dashboard prof
 
 ---
 
-# 📬 Contacto
+# 📬 Contacto  
 Proyecto creado por **Luis Luna**.  
 Disponible para colaboración, inversión y expansión tecnológica.
+
+</details>
+
+---
+
+<details>
+<summary><strong>🇺🇸 English</strong></summary>
+
+## 🎵 PublishReal  
+PublishReal is a modern platform designed to centralize everything an independent artist needs to manage their music career.  
+It brings professional tools together into one ecosystem, eliminating the need to jump between multiple disconnected services.
+
+---
+
+## 🌟 Vision  
+To create a space where any artist —regardless of budget or experience— can manage their identity, music, team, and analytics from a single, intuitive, professional dashboard.
+
+PublishReal aims to democratize tools that were once exclusive to major labels.
+
+---
+
+## 🚀 What is PublishReal?  
+PublishReal allows artists to:
+
+- Manage their professional profile  
+- Organize their full music catalog  
+- Upload and manage promotional videos  
+- Analyze real streaming statistics  
+- Collaborate with their team  
+- Prepare for future distribution and monetization features  
+
+All in one place.
+
+---
+
+# 🎧 Key Features
+
+## 🎤 Artist Profile  
+A professional space where artists control their identity:
+
+- Photo, bio, and social links  
+- Musical style  
+- Full catalog  
+- Promotional videos  
+
+---
+
+## 🎼 Music (Releases & Tracks)  
+A module inspired by platforms like DistroKid:
+
+- Create releases  
+- Add tracks  
+- Upload cover art  
+- Maintain a clean, organized catalog  
+
+---
+
+## 🎬 Promotional Videos  
+Perfect for campaigns and social content:
+
+- Upload clips, reels, and trailers  
+- Organize by category  
+- Integrate with the artist profile  
+
+---
+
+## 📊 Streaming Statistics  
+A *Spotify for Artists*-style analytics panel:
+
+- Streams by platform  
+- Streams by country  
+- Trends by date  
+- Growth over time  
+
+---
+
+## 👥 Teams & Collaborators  
+Professional team management:
+
+- Role-based invitations  
+- Custom permissions  
+- Secure collaboration  
+- Access control  
+
+---
+
+# 🧩 System Architecture  
+The backend is built with:
+
+- ASP.NET Core 10  
+- Entity Framework Core (Code First)  
+- Identity + JWT  
+- SQL Server  
+- REST controllers  
+- Interactive documentation with Swagger/Scalar  
+
+---
+
+# 🧭 Roadmap  
+PublishReal will evolve into a complete ecosystem:
+
+- Music distribution  
+- Financial reporting  
+- Automatic payments and splits  
+- Streaming platform integrations  
+- AI-powered audience insights  
+- Automated marketing tools  
+
+---
+
+# 🏁 Current Status  
+The backend already includes:
+
+- Full authentication  
+- Artist management  
+- Music management  
+- Video management  
+- Team management  
+- Streaming statistics  
+- Scalable production-ready architecture  
+
+---
+
+# 🤝 Who is PublishReal for?  
+- Independent artists  
+- Managers  
+- Producers  
+- Small labels  
+- Content creators  
+- Emerging music teams  
+
+---
+
+# 📬 Contact  
+Project created by **Luis Luna**.  
+Open for collaboration, investment, and technological expansion.
+
+</details>
