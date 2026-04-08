@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PublishRealLiteApi.Models
 {
@@ -9,7 +10,9 @@ namespace PublishRealLiteApi.Models
 
         // FK to Identity user (string Id) 
         public string UserId { get; set; } = string.Empty;
-        public object? User { get; set; }
+
+        // Navigation to the Identity user is defined in the infrastructure project (AppUser).
+        // The navigation property is not declared here to keep the Models project decoupled from the Identity type.
         public string ArtistName { get; set; } = string.Empty;
         public string? Bio { get; set; }
         public string? ProfileImageUrl { get; set; }

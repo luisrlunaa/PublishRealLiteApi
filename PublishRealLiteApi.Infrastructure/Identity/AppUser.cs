@@ -5,4 +5,5 @@ namespace PublishRealLiteApi.Infrastructure.Identity;
 public class AppUser : IdentityUser
 {
     public int? ArtistProfileId { get; set; }
+    public string DisplayName { get; set; } = string.Empty;
 }

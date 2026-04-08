@@ -6,146 +6,233 @@ using Microsoft.EntityFrameworkCore;
 using PublishRealLiteApi.Infrastructure.Identity;
 using PublishRealLiteApi.Models;
 
-namespace PublishRealLiteApi.Infrastructure.Data;
-
-public class AppDbContext : IdentityDbContext<AppUser>
+namespace PublishRealLiteApi.Infrastructure.Data
 {
-    public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
-
-    public DbSet<ArtistProfile> ArtistProfiles => Set<ArtistProfile>();
-    public DbSet<Release> Releases => Set<Release>();
-    public DbSet<Track> Tracks => Set<Track>();
-    public DbSet<ArtistVideo> ArtistVideos => Set<ArtistVideo>();
-    public DbSet<Team> Teams => Set<Team>();
-    public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
-    public DbSet<TeamInvite> TeamInvites => Set<TeamInvite>();
-    public DbSet<StreamStat> StreamStats => Set<StreamStat>();
-
-    protected override void OnModelCreating(ModelBuilder builder)
+    public class AppDbContext : IdentityDbContext<AppUser>
     {
-        base.OnModelCreating(builder);
+        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
-        // 1) Aplicar solo configuraciones válidas del ensamblado actual (filtrado por namespace de modelos)
-        ApplyFilteredConfigurations(builder, Assembly.GetExecutingAssembly());
+        public DbSet<ArtistProfile> ArtistProfiles => Set<ArtistProfile>();
+        public DbSet<Release> Releases => Set<Release>();
+        public DbSet<Track> Tracks => Set<Track>();
+        public DbSet<ArtistVideo> ArtistVideos => Set<ArtistVideo>();
+        public DbSet<Team> Teams => Set<Team>();
+        public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
+        public DbSet<TeamInvite> TeamInvites => Set<TeamInvite>();
+        public DbSet<StreamStat> StreamStats => Set<StreamStat>();
 
-        // 2) Mapeos explícitos (mantener tus reglas)
-        builder.Entity<ArtistProfile>(b =>
+        protected override void OnModelCreating(ModelBuilder builder)
         {
-            b.HasKey(p => p.Id);
+            base.OnModelCreating(builder);
 
-            b.HasOne(p => p.User)
-             .WithOne()
-             .HasForeignKey<ArtistProfile>(p => p.UserId)
-             .OnDelete(DeleteBehavior.Cascade);
+            // Diagnostic: list mapped entity CLR types
+            var mapped = builder.Model.GetEntityTypes()
+                .Select(e => new { Name = e.Name, Clr = e.ClrType?.FullName ?? "<null>" })
+                .OrderBy(x => x.Name)
+                .ToList();
 
-            b.HasMany(p => p.Releases)
-             .WithOne(r => r.ArtistProfile)
-             .HasForeignKey(r => r.ArtistProfileId)
-             .OnDelete(DeleteBehavior.Cascade);
+            Console.WriteLine("Mapped entity types (diagnostic):");
+            foreach (var m in mapped)
+            {
+                Console.WriteLine($" - {m.Name} => {m.Clr}");
+            }
 
-            b.HasMany(p => p.Videos)
-             .WithOne(v => v.ArtistProfile)
-             .HasForeignKey(v => v.ArtistProfileId)
-             .OnDelete(DeleteBehavior.Cascade);
-        });
+            // Apply filtered configurations from all relevant loaded assemblies (strict, safe)
+            ApplyFilteredConfigurations(builder);
 
-        builder.Entity<Release>(r =>
-        {
-            r.HasKey(x => x.Id);
-            r.Property(x => x.Title).IsRequired();
-        });
+            // Explicit mappings (your existing rules)
+            builder.Entity<ArtistProfile>(b =>
+            {
+                b.HasKey(p => p.Id);
 
-        builder.Entity<Track>(t =>
-        {
-            t.HasKey(x => x.Id);
-            t.HasIndex(x => new { x.ReleaseId, x.Position }).IsUnique();
-        });
+                // Map to Identity user (AppUser) without requiring a CLR navigation property
+                b.HasOne<AppUser>()
+                 .WithOne()
+                 .HasForeignKey<ArtistProfile>(p => p.UserId)
+                 .OnDelete(DeleteBehavior.Cascade);
 
-        builder.Entity<ArtistVideo>(v =>
-        {
-            v.HasKey(x => x.Id);
-            v.Property(x => x.Title).HasMaxLength(300).IsRequired();
-            v.Property(x => x.ThumbnailUrl).HasMaxLength(500);
-            v.Property(x => x.VideoUrl).HasMaxLength(1000);
-        });
+                b.HasMany(p => p.Releases)
+                 .WithOne(r => r.ArtistProfile)
+                 .HasForeignKey(r => r.ArtistProfileId)
+                 .OnDelete(DeleteBehavior.Cascade);
 
-        builder.Entity<StreamStat>(s =>
-        {
-            s.HasKey(x => x.Id);
-            s.Property(x => x.Platform).HasMaxLength(50).IsRequired();
-            s.Property(x => x.Country).HasMaxLength(100).IsRequired();
-            s.Property(x => x.MetricType).HasMaxLength(50).IsRequired();
-            s.Property(x => x.Source).HasMaxLength(200);
-        });
+                b.HasMany(p => p.Videos)
+                 .WithOne(v => v.ArtistProfile)
+                 .HasForeignKey(v => v.ArtistProfileId)
+                 .OnDelete(DeleteBehavior.Cascade);
+            });
 
-        builder.Entity<Team>(t =>
-        {
-            t.HasKey(x => x.Id);
-            t.Property(x => x.Name).HasMaxLength(200);
-        });
+            builder.Entity<Release>(r =>
+            {
+                r.HasKey(x => x.Id);
+                r.Property(x => x.Title).IsRequired();
+            });
 
-        builder.Entity<TeamMember>(tm =>
-        {
-            tm.HasKey(x => x.Id);
-            tm.Property(x => x.Email).HasMaxLength(256).IsRequired();
-        });
+            builder.Entity<Track>(t =>
+            {
+                t.HasKey(x => x.Id);
+                t.HasIndex(x => new { x.ReleaseId, x.Position }).IsUnique();
+            });
 
-        builder.Entity<TeamInvite>(ti =>
-        {
-            ti.HasKey(x => x.Id);
-            ti.Property(x => x.Email).HasMaxLength(256).IsRequired();
-            ti.Property(x => x.Token).HasMaxLength(200).IsRequired();
-            ti.HasIndex(x => x.Token).IsUnique();
-        });
+            builder.Entity<ArtistVideo>(v =>
+            {
+                v.HasKey(x => x.Id);
+                v.Property(x => x.Title).HasMaxLength(300).IsRequired();
+                v.Property(x => x.ThumbnailUrl).HasMaxLength(500);
+                v.Property(x => x.VideoUrl).HasMaxLength(1000);
+            });
 
-        // 3) Validación estricta: detectar entidades sin clave que pertenezcan a tu dominio y fallar con mensaje claro
-        var typesWithoutKey = builder.Model.GetEntityTypes()
-            .Where(e => e.FindPrimaryKey() == null)
-            .Select(e => new { e.Name, Clr = e.ClrType })
-            .ToList();
+            builder.Entity<StreamStat>(s =>
+            {
+                s.HasKey(x => x.Id);
+                s.Property(x => x.Platform).HasMaxLength(50).IsRequired();
+                s.Property(x => x.Country).HasMaxLength(100).IsRequired();
+                s.Property(x => x.MetricType).HasMaxLength(50).IsRequired();
+                s.Property(x => x.Source).HasMaxLength(200);
+            });
 
-        // Filtrar tipos del framework y System.Object; conservar solo los que pertenecen a tu código
-        var problematic = typesWithoutKey
-            .Where(x =>
-                x.Clr != null &&
-                x.Clr != typeof(object) &&
-                (x.Clr.Namespace != null && x.Clr.Namespace.StartsWith("PublishRealLiteApi", StringComparison.OrdinalIgnoreCase)))
-            .Select(x => x.Name)
-            .ToList();
+            builder.Entity<Team>(t =>
+            {
+                t.HasKey(x => x.Id);
+                t.Property(x => x.Name).HasMaxLength(200);
+            });
 
-        if (problematic.Any())
-        {
-            var list = string.Join(", ", problematic);
-            throw new InvalidOperationException($"EF model contains entity types without primary key (fix these configurations/models): {list}");
+            builder.Entity<TeamMember>(tm =>
+            {
+                tm.HasKey(x => x.Id);
+                tm.Property(x => x.Email).HasMaxLength(256).IsRequired();
+            });
+
+            builder.Entity<TeamInvite>(ti =>
+            {
+                ti.HasKey(x => x.Id);
+                ti.Property(x => x.Email).HasMaxLength(256).IsRequired();
+                ti.Property(x => x.Token).HasMaxLength(200).IsRequired();
+                ti.HasIndex(x => x.Token).IsUnique();
+            });
+
+            // Strict validation: detect entities without key that belong to your domain and fail with clear message
+            var typesWithoutKey = builder.Model.GetEntityTypes()
+                .Where(e => e.FindPrimaryKey() == null)
+                .Select(e => new { e.Name, Clr = e.ClrType })
+                .ToList();
+
+            var problematic = typesWithoutKey
+                .Where(x =>
+                    x.Clr != null &&
+                    x.Clr != typeof(object) &&
+                    (x.Clr.Namespace != null && x.Clr.Namespace.StartsWith("PublishRealLiteApi", StringComparison.OrdinalIgnoreCase)))
+                .Select(x => new { x.Name, Namespace = x.Clr.Namespace })
+                .ToList();
+
+            if (typesWithoutKey.Any(t => t.Clr == typeof(object)))
+            {
+                Console.WriteLine("EF Core detected an entity mapped as 'object'. This usually means a configuration class targets System.Object or a configuration failed to resolve the entity type.");
+                Console.WriteLine("Run the diagnostic helper to find types implementing IEntityTypeConfiguration<object> or invalid configurations.");
+            }
+
+            if (problematic.Any())
+            {
+                var list = string.Join(", ", problematic.Select(p => $"{p.Name} ({p.Namespace})"));
+                throw new InvalidOperationException($"EF model contains entity types without primary key (fix these models): {list}");
+            }
         }
-    }
 
-    private void ApplyFilteredConfigurations(ModelBuilder builder, Assembly assembly)
-    {
-        var configTypes = assembly.GetTypes()
-            .Where(t => !t.IsAbstract && !t.IsInterface)
-            .Select(t => new
-            {
-                Type = t,
-                Interface = t.GetInterfaces()
-                    .FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEntityTypeConfiguration<>))
-            })
-            .Where(x => x.Interface != null)
-            .ToList();
-
-        foreach (var cfg in configTypes)
+        // Hardened ApplyFilteredConfigurations: handles multiple IEntityTypeConfiguration<> interfaces,
+        // logs every mapping decision, and collects any configurations that resolve to System.Object.
+        private void ApplyFilteredConfigurations(ModelBuilder builder)
         {
-            var entityType = cfg.Interface!.GetGenericArguments()[0];
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(a => !a.IsDynamic && a.FullName != null && a.FullName.StartsWith("PublishRealLiteApi", StringComparison.OrdinalIgnoreCase))
+                .ToList();
 
-            // Aplicar solo si la entidad pertenece al namespace de modelos de la aplicación
-            if (entityType.Namespace != null && entityType.Namespace.StartsWith("PublishRealLiteApi.Models"))
+            Console.WriteLine($"Scanning {assemblies.Count} PublishRealLiteApi assembly(ies) for IEntityTypeConfiguration<> implementations...");
+
+            var offendingConfigs = new System.Collections.Generic.List<string>();
+
+            foreach (var assembly in assemblies)
             {
-                var applyConfigMethod = typeof(ModelBuilder).GetMethods()
-                    .First(m => m.Name == "ApplyConfiguration" && m.GetParameters().Length == 1)
-                    .MakeGenericMethod(entityType);
+                Type[] types;
+                try
+                {
+                    types = assembly.GetTypes();
+                }
+                catch (ReflectionTypeLoadException rtle)
+                {
+                    types = rtle.Types.Where(t => t != null).ToArray()!; // proceed with loadable types
+                }
 
-                var instance = Activator.CreateInstance(cfg.Type);
-                applyConfigMethod.Invoke(builder, new[] { instance! });
+                var configTypes = types
+                    .Where(t => t != null && !t.IsAbstract && !t.IsInterface)
+                    .Select(t => new
+                    {
+                        Type = t!,
+                        Interfaces = t!.GetInterfaces()
+                            .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEntityTypeConfiguration<>))
+                            .ToArray()
+                    })
+                    .Where(x => x.Interfaces.Length > 0)
+                    .ToList();
+
+                Console.WriteLine($"Found {configTypes.Count} configuration type(s) in assembly {assembly.FullName}.");
+
+                foreach (var cfg in configTypes)
+                {
+                    foreach (var iface in cfg.Interfaces)
+                    {
+                        Type? entityType = null;
+                        try
+                        {
+                            entityType = iface.GetGenericArguments()[0];
+
+                            Console.WriteLine($"Configuration type: {cfg.Type.FullName} -> resolved entity: {entityType?.FullName ?? "<null>"}");
+
+                            if (entityType == null || entityType == typeof(object))
+                            {
+                                Console.WriteLine($"Skipping configuration {cfg.Type.FullName} because it targets '{entityType?.FullName ?? "null"}'.");
+                                offendingConfigs.Add($"{cfg.Type.FullName} -> {entityType?.FullName ?? "<null>"}");
+                                continue;
+                            }
+
+                            if (entityType.Namespace == null || !entityType.Namespace.StartsWith("PublishRealLiteApi.Models", StringComparison.Ordinal))
+                            {
+                                Console.WriteLine($"Skipping configuration {cfg.Type.FullName} because entity {entityType.FullName} is outside domain namespace.");
+                                continue;
+                            }
+
+                            var applyConfigMethod = typeof(ModelBuilder).GetMethods()
+                                .First(m => m.Name == "ApplyConfiguration" && m.GetParameters().Length == 1)
+                                .MakeGenericMethod(entityType);
+
+                            var instance = Activator.CreateInstance(cfg.Type);
+                            if (instance == null)
+                            {
+                                Console.WriteLine($"Could not create instance of configuration type {cfg.Type.FullName}; skipping.");
+                                continue;
+                            }
+
+                            applyConfigMethod.Invoke(builder, new[] { instance });
+                            Console.WriteLine($"Applied configuration {cfg.Type.FullName} for entity {entityType.FullName}.");
+                        }
+                        catch (TargetInvocationException tie)
+                        {
+                            Console.WriteLine($"Error applying configuration {cfg.Type.FullName} for entity '{entityType?.FullName ?? "unknown"}': {tie.InnerException?.Message ?? tie.Message}");
+                            continue;
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Unexpected error while applying configuration {cfg.Type.FullName}: {ex.Message}");
+                            continue;
+                        }
+                    }
+                }
+            }
+
+            if (offendingConfigs.Any())
+            {
+                var details = string.Join("; ", offendingConfigs);
+                // Fail early with a clear message listing offending configuration types
+                throw new InvalidOperationException($"One or more IEntityTypeConfiguration<> implementations resolved to System.Object or null. Offenders: {details}");
             }
         }
     }

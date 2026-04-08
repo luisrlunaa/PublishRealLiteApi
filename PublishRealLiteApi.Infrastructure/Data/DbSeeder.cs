@@ -1,7 +1,10 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
+using System.Linq;
 using PublishRealLiteApi.Infrastructure.Identity;
 using PublishRealLiteApi.Models;
+using System;
 
 namespace PublishRealLiteApi.Infrastructure.Data
 {
@@ -13,6 +16,18 @@ namespace PublishRealLiteApi.Infrastructure.Data
             var userManager = services.GetRequiredService<UserManager<AppUser>>();
             var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
             var db = services.GetRequiredService<AppDbContext>();
+
+            // Ensure the database schema exists before attempting Identity queries.
+            // Defensive: if migrations exist apply them; otherwise create schema for first-run.
+            try
+            {
+                await EnsureDatabaseSchemaAsync(db);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error ensuring database schema before seeding: {ex}");
+                throw;
+            }
 
             // Create roles if they don't exist 
             var roles = new[] { "Admin", "Artist" };
@@ -28,7 +43,7 @@ namespace PublishRealLiteApi.Infrastructure.Data
             var adminEmail = "admin@publishreal.local";
             if (await userManager.FindByEmailAsync(adminEmail) == null)
             {
-                var admin = new AppUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true };
+                var admin = new AppUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true, DisplayName = "Admin" };
                 var res = await userManager.CreateAsync(admin, "AdminPass!23");
                 if (res.Succeeded)
                 {
@@ -40,7 +55,7 @@ namespace PublishRealLiteApi.Infrastructure.Data
             var artistEmail = "artist1@publishreal.local";
             if (await userManager.FindByEmailAsync(artistEmail) == null)
             {
-                var artistUser = new AppUser { UserName = artistEmail, Email = artistEmail, EmailConfirmed = true };
+                var artistUser = new AppUser { UserName = artistEmail, Email = artistEmail, EmailConfirmed = true, DisplayName = "Demo Artist" };
                 var res = await userManager.CreateAsync(artistUser, "Password123!");
                 if (res.Succeeded)
                 {
@@ -98,6 +113,33 @@ namespace PublishRealLiteApi.Infrastructure.Data
                     await db.SaveChangesAsync();
                 }
             }
+        }
+
+        private static Task EnsureDatabaseSchemaAsync(AppDbContext db)
+        {
+            // If the project contains migrations, apply them. Otherwise use EnsureCreated for initial schema.
+            var allMigrations = db.Database.GetMigrations().ToList();
+            if (!allMigrations.Any())
+            {
+                // No migrations defined in the project
+                var applied = db.Database.GetAppliedMigrations().ToList();
+                if (!db.Database.CanConnect() || !applied.Any())
+                {
+                    Console.WriteLine("No migrations found. Creating database schema with EnsureCreated()...");
+                    db.Database.EnsureCreated();
+                }
+                else
+                {
+                    Console.WriteLine("No migrations found but database already has applied migrations/schema. Skipping creation.");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Migrations detected. Applying migrations...");
+                db.Database.Migrate();
+            }
+
+            return Task.CompletedTask;
         }
     }
 }
