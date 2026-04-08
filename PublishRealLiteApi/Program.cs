@@ -25,6 +25,16 @@ builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IUploadService, LocalUploadService>();
 builder.Services.AddScoped<SimpleRateLimitMiddleware>();
+// Storage service provider selection
+var storageProvider = builder.Configuration.GetValue<string>("Storage:Provider") ?? "Local";
+if (storageProvider.Equals("Azure", StringComparison.OrdinalIgnoreCase))
+{
+    builder.Services.AddScoped<PublishRealLiteApi.Services.Interfaces.IStorageService, PublishRealLiteApi.Services.AzureBlobStorageService>();
+}
+else
+{
+    builder.Services.AddScoped<PublishRealLiteApi.Services.Interfaces.IStorageService, PublishRealLiteApi.Services.LocalStorageService>();
+}
 
 // JWT Authentication
 var jwtSection = builder.Configuration.GetSection("JwtSettings");
@@ -74,6 +84,13 @@ builder.Services.AddCors(options =>
 // Rate limiting and memory cache
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<SimpleRateLimitMiddleware>();
+// HttpContext accessor and current user service for auditing
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<PublishRealLiteApi.Services.ICurrentUserService, PublishRealLiteApi.Services.CurrentUserService>();
+// Background worker for stats aggregation
+builder.Services.AddHostedService<PublishRealLiteApi.Workers.StreamStatAggregatorWorker>();
+// Aggregator service for manual invocation
+builder.Services.AddScoped<PublishRealLiteApi.Services.Interfaces.IStreamStatAggregatorService, PublishRealLiteApi.Services.StreamStatAggregatorService>();
 
 var app = builder.Build();
 
@@ -108,10 +125,63 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 
 app.MapControllers();
 
+// Diagnostic endpoint to trigger aggregation on demand (admin use)
+app.MapPost("/admin/aggregate-stats", async (PublishRealLiteApi.Services.Interfaces.IStreamStatAggregatorService svc, CancellationToken ct) =>
+{
+    await svc.AggregateOnceAsync(ct);
+    return Results.Ok(new { message = "Aggregation executed" });
+}).RequireAuthorization();
+
 // Database migration + seeding at startup with enhanced diagnostics
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+        // E: List IEntityTypeConfiguration<> implementations across PublishRealLiteApi assemblies for diagnostics
+        try
+        {
+            var asmList = AppDomain.CurrentDomain.GetAssemblies()
+                .Where(a => !a.IsDynamic && a.FullName != null && a.FullName.StartsWith("PublishRealLiteApi", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            logger.LogInformation("Scanning {Count} assemblies for IEntityTypeConfiguration<> implementations...", asmList.Count);
+
+            var found = new List<string>();
+            foreach (var asm in asmList)
+            {
+                Type[] types;
+                try
+                {
+                    types = asm.GetTypes();
+                }
+                catch (ReflectionTypeLoadException rtle)
+                {
+                    types = rtle.Types.Where(t => t != null).ToArray()!;
+                }
+
+                foreach (var t in types.Where(t => t != null && !t.IsAbstract && !t.IsInterface))
+                {
+                    var ifaces = t.GetInterfaces()
+                        .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<>))
+                        .ToArray();
+                    if (ifaces.Length == 0) continue;
+
+                    foreach (var iface in ifaces)
+                    {
+                        var ent = iface.GetGenericArguments()[0];
+                        var entry = $"{asm.GetName().Name}: {t.FullName} -> IEntityTypeConfiguration<{ent.FullName}>";
+                        found.Add(entry);
+                        logger.LogInformation(entry);
+                    }
+                }
+            }
+
+            if (!found.Any()) logger.LogInformation("No IEntityTypeConfiguration<> implementations found in PublishRealLiteApi assemblies.");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Error while scanning assemblies for IEntityTypeConfiguration<> implementations");
+        }
     try
     {
         var db = services.GetRequiredService<AppDbContext>();
@@ -123,7 +193,7 @@ using (var scope = app.Services.CreateScope())
             // No migrations in the project: use EnsureCreated for first-run schema creation
             if (!db.Database.CanConnect())
             {
-                Console.WriteLine("No migrations found and database cannot be reached. Creating database schema with EnsureCreated()...");
+                logger.LogInformation("No migrations found and database cannot be reached. Creating database schema with EnsureCreated()...");
                 db.Database.EnsureCreated();
             }
             else
@@ -131,12 +201,12 @@ using (var scope = app.Services.CreateScope())
                 var applied = db.Database.GetAppliedMigrations().ToList();
                 if (!applied.Any())
                 {
-                    Console.WriteLine("No migrations present and no applied migrations found. Creating schema with EnsureCreated()...");
+                    logger.LogInformation("No migrations present and no applied migrations found. Creating schema with EnsureCreated()...");
                     db.Database.EnsureCreated();
                 }
                 else
                 {
-                    Console.WriteLine("No migrations in project, but database already has schema. Skipping creation.");
+                    logger.LogInformation("No migrations in project, but database already has schema. Skipping creation.");
                 }
             }
         }
@@ -145,20 +215,74 @@ using (var scope = app.Services.CreateScope())
             // There are migrations: apply them when needed
             if (!db.Database.CanConnect())
             {
-                Console.WriteLine("Database does not exist or cannot be reached. Creating database and applying migrations...");
+                logger.LogInformation("Database does not exist or cannot be reached. Creating database and applying migrations...");
                 db.Database.Migrate();
             }
             else
             {
-                var pending = db.Database.GetPendingMigrations().ToList();
-                if (pending.Any())
+                var applied = db.Database.GetAppliedMigrations().ToList();
+
+                // If there are no applied migrations but the DB already contains tables (created outside migrations)
+                // skip automatic Migrate to avoid "object already exists" errors and log actionable guidance.
+                if (!applied.Any())
                 {
-                    Console.WriteLine($"Applying {pending.Count} pending migration(s)...");
-                    db.Database.Migrate();
+                    bool dbHasTables = false;
+                    try
+                    {
+                        var conn = db.Database.GetDbConnection();
+                        conn.Open();
+                        using var cmd = conn.CreateCommand();
+                        cmd.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES";
+                        var res = cmd.ExecuteScalar();
+                        conn.Close();
+                        dbHasTables = Convert.ToInt32(res) > 0;
+                    }
+                    catch (Exception ex)
+                    {
+                        logger.LogWarning(ex, "Could not determine if database already has tables; skipping automatic baseline detection.");
+                    }
+
+                    if (dbHasTables)
+                    {
+                        logger.LogWarning("Database contains existing schema but no applied EF migrations were detected. Skipping automatic Migrate() to avoid creating objects that already exist.");
+                        logger.LogWarning("Action recommended: create a baseline migration and mark it as applied, or generate migrations with 'ignore changes' so EF Core knows the DB is already in the expected state.");
+                        logger.LogWarning("Examples:");
+                        logger.LogWarning(" - In Package Manager Console (Visual Studio): Add-Migration InitialCreate -IgnoreChanges");
+                        logger.LogWarning(" - Or using dotnet-ef: generate a migration then edit it to be empty, or use project-specific instructions to create a baseline.");
+                        logger.LogWarning("Also for production: replace EnsureCreated() by using migrations exclusively and apply them in a controlled deployment (use 'dotnet ef database update' in CI/CD).\n");
+
+                        // Additional guidance as requested by reviewer
+                        logger.LogWarning("Notes:");
+                        logger.LogWarning(" - For production: replace EnsureCreated() by using only migrations (create the initial migration and use Migrate in controlled deployments).");
+                        logger.LogWarning(" - The worker is a prototype: for scale consider a message queue (Kafka, Event Hubs) or a TSDB like TimescaleDB for raw ingestion.");
+                        logger.LogWarning(" - To force aggregation via HTTP you can convert /admin/aggregate-stats to call the worker's aggregation method directly (AggregateAsync).");
+                    }
+                    else
+                    {
+                        var pending = db.Database.GetPendingMigrations().ToList();
+                        if (pending.Any())
+                        {
+                            logger.LogInformation("Applying {Count} pending migration(s)...", pending.Count);
+                            db.Database.Migrate();
+                        }
+                        else
+                        {
+                            logger.LogInformation("No pending migrations. Database is up-to-date.");
+                        }
+                    }
                 }
                 else
                 {
-                    Console.WriteLine("No pending migrations. Database is up-to-date.");
+                    var pending = db.Database.GetPendingMigrations().ToList();
+                    if (pending.Any())
+                    {
+                        logger.LogInformation("Applying {Count} pending migration(s)...", pending.Count);
+                        db.Database.Migrate();
+                    }
+                    else
+                    {
+                        logger.LogInformation("No pending migrations. Database is up-to-date.");
+                    }
                 }
             }
         }
@@ -167,12 +291,11 @@ using (var scope = app.Services.CreateScope())
         await DbSeeder.SeedAsync(services);
     }
     catch (InvalidOperationException invEx) when (
-        invEx.Message?.Contains("resolved to System.Object") == true ||
-        invEx.Message?.Contains("entity type 'object'") == true ||
-        invEx.Message?.Contains("requires a primary key") == true)
+    invEx.Message?.Contains("resolved to System.Object") == true ||
+    invEx.Message?.Contains("entity type 'object'") == true ||
+    invEx.Message?.Contains("requires a primary key") == true)
     {
-        Console.WriteLine("Startup migration failed due to EF model validation (possible 'object' entity mapping).");
-        Console.WriteLine("Exception: " + invEx);
+        logger.LogError(invEx, "Startup migration failed due to EF model validation (possible 'object' entity mapping).");
 
         // Scan assemblies for IEntityTypeConfiguration<> implementations and print resolved generic arguments
         try
@@ -180,7 +303,7 @@ using (var scope = app.Services.CreateScope())
             var assemblies = new[] { Assembly.GetExecutingAssembly() };
             foreach (var asm in assemblies)
             {
-                Console.WriteLine($"Scanning assembly {asm.FullName} for IEntityTypeConfiguration<> implementations...");
+                logger.LogInformation("Scanning assembly {Asm} for IEntityTypeConfiguration<> implementations...", asm.FullName);
 
                 var configs = asm.GetTypes()
                     .Where(t => !t.IsAbstract && !t.IsInterface)
@@ -196,7 +319,7 @@ using (var scope = app.Services.CreateScope())
 
                 if (!configs.Any())
                 {
-                    Console.WriteLine("No IEntityTypeConfiguration<> implementations found in this assembly.");
+                    logger.LogInformation("No IEntityTypeConfiguration<> implementations found in this assembly.");
                 }
                 else
                 {
@@ -205,7 +328,7 @@ using (var scope = app.Services.CreateScope())
                         foreach (var iface in cfg.Interfaces)
                         {
                             var entityType = iface.GetGenericArguments()[0];
-                            Console.WriteLine($"Config: {cfg.Type.FullName} -> IEntityTypeConfiguration<{entityType.FullName}>");
+                            logger.LogInformation("Config: {Cfg} -> IEntityTypeConfiguration<{Entity}>", cfg.Type.FullName, entityType.FullName);
                         }
                     }
                 }
@@ -213,7 +336,7 @@ using (var scope = app.Services.CreateScope())
         }
         catch (Exception scanEx)
         {
-            Console.WriteLine("Error while scanning for configuration types: " + scanEx);
+            logger.LogError(scanEx, "Error while scanning for configuration types");
         }
 
         // Re-throw to preserve original failure behavior
@@ -221,7 +344,7 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        Console.WriteLine("Startup migration/seeding error: " + ex);
+        logger.LogError(ex, "Startup migration/seeding error");
         throw;
     }
 }

@@ -11,5 +11,10 @@ namespace PublishRealLiteApi.Models
         public string ThumbnailUrl { get; set; } = string.Empty; // imagen <= 3MB
         public string VideoUrl { get; set; } = string.Empty; // YouTube/Vimeo URL
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+        // Soft delete and audit
+        public bool IsDeleted { get; set; } = false;
+        public DateTime? DeletedAt { get; set; }
+        public string? CreatedBy { get; set; }
+        public string? UpdatedBy { get; set; }
     }
 }

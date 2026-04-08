@@ -1,10 +1,9 @@
 ﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
-using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
 using PublishRealLiteApi.Infrastructure.Identity;
 using PublishRealLiteApi.Models;
-using System;
 
 namespace PublishRealLiteApi.Infrastructure.Data
 {
@@ -135,8 +134,63 @@ namespace PublishRealLiteApi.Infrastructure.Data
             }
             else
             {
-                Console.WriteLine("Migrations detected. Applying migrations...");
-                db.Database.Migrate();
+                // There are migrations in the project. Be defensive: if none are applied but the DB already
+                // contains tables, skip automatic Migrate() to avoid "object already exists" errors.
+                var applied = db.Database.GetAppliedMigrations().ToList();
+                if (!applied.Any())
+                {
+                    bool dbHasTables = false;
+                    try
+                    {
+                        var conn = db.Database.GetDbConnection();
+                        conn.Open();
+                        using var cmd = conn.CreateCommand();
+                        cmd.CommandText = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLES";
+                        var res = cmd.ExecuteScalar();
+                        conn.Close();
+                        dbHasTables = Convert.ToInt32(res) > 0;
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine("Could not determine if database already has tables: " + ex.Message);
+                    }
+
+                    if (dbHasTables)
+                    {
+                        Console.WriteLine("Database contains existing schema but no applied EF migrations were detected. Skipping automatic Migrate() to avoid creating objects that already exist.");
+                        Console.WriteLine("Action recommended: create a baseline migration (e.g. using -IgnoreChanges) or mark the current schema as the baseline before applying migrations.");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Migrations detected. Applying migrations...");
+                        try
+                        {
+                            db.Database.Migrate();
+                        }
+                        catch (SqlException sqlex)
+                        {
+                            var msg = sqlex.Message ?? string.Empty;
+                            if (msg.Contains("There is already an object named", StringComparison.OrdinalIgnoreCase) || msg.Contains("already an object named", StringComparison.OrdinalIgnoreCase))
+                            {
+                                Console.WriteLine("Migration failed because some database objects already exist. This can happen if the database was previously created with EnsureCreated() or manually.");
+                                Console.WriteLine("Recommended actions:");
+                                Console.WriteLine(" - Create an initial baseline migration and mark it as applied (use -IgnoreChanges or generate an empty migration and commit it).");
+                                Console.WriteLine(" - Or drop the database and let migrations create it if you are in development and data loss is acceptable.");
+                                Console.WriteLine(" - Check the __EFMigrationsHistory table to see applied migrations.");
+                                Console.WriteLine("SqlException: " + sqlex.Message);
+                            }
+                            else
+                            {
+                                throw;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("Migrations detected. Applying migrations...");
+                    db.Database.Migrate();
+                }
             }
 
             return Task.CompletedTask;

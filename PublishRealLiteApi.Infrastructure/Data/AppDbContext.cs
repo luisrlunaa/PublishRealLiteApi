@@ -1,16 +1,20 @@
-﻿using System;
-using System.Linq;
-using System.Reflection;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using PublishRealLiteApi.Infrastructure.Identity;
 using PublishRealLiteApi.Models;
+using System.Reflection;
 
 namespace PublishRealLiteApi.Infrastructure.Data
 {
     public class AppDbContext : IdentityDbContext<AppUser>
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
+        private readonly ILogger<AppDbContext> _logger;
+
+        public AppDbContext(DbContextOptions<AppDbContext> options, ILogger<AppDbContext> logger) : base(options)
+        {
+            _logger = logger;
+        }
 
         public DbSet<ArtistProfile> ArtistProfiles => Set<ArtistProfile>();
         public DbSet<Release> Releases => Set<Release>();
@@ -20,6 +24,7 @@ namespace PublishRealLiteApi.Infrastructure.Data
         public DbSet<TeamMember> TeamMembers => Set<TeamMember>();
         public DbSet<TeamInvite> TeamInvites => Set<TeamInvite>();
         public DbSet<StreamStat> StreamStats => Set<StreamStat>();
+        public DbSet<PublishRealLiteApi.Models.StreamStatDailyAggregate> StreamStatDailyAggregates => Set<PublishRealLiteApi.Models.StreamStatDailyAggregate>();
 
         protected override void OnModelCreating(ModelBuilder builder)
         {
@@ -31,10 +36,10 @@ namespace PublishRealLiteApi.Infrastructure.Data
                 .OrderBy(x => x.Name)
                 .ToList();
 
-            Console.WriteLine("Mapped entity types (diagnostic):");
+            _logger.LogInformation("Mapped entity types (diagnostic):");
             foreach (var m in mapped)
             {
-                Console.WriteLine($" - {m.Name} => {m.Clr}");
+                _logger.LogInformation(" - {Name} => {Clr}", m.Name, m.Clr);
             }
 
             // Apply filtered configurations from all relevant loaded assemblies (strict, safe)
@@ -89,6 +94,15 @@ namespace PublishRealLiteApi.Infrastructure.Data
                 s.Property(x => x.Country).HasMaxLength(100).IsRequired();
                 s.Property(x => x.MetricType).HasMaxLength(50).IsRequired();
                 s.Property(x => x.Source).HasMaxLength(200);
+                // Composite index for efficient queries
+                s.HasIndex(x => new { x.ArtistProfileId, x.Date, x.Platform });
+                s.HasIndex(x => new { x.Date, x.Platform });
+            });
+
+            builder.Entity<PublishRealLiteApi.Models.StreamStatDailyAggregate>(agg =>
+            {
+                agg.HasKey(a => a.Id);
+                agg.HasIndex(a => new { a.ArtistProfileId, a.Date, a.Platform }).IsUnique(false);
             });
 
             builder.Entity<Team>(t =>
@@ -127,14 +141,70 @@ namespace PublishRealLiteApi.Infrastructure.Data
 
             if (typesWithoutKey.Any(t => t.Clr == typeof(object)))
             {
-                Console.WriteLine("EF Core detected an entity mapped as 'object'. This usually means a configuration class targets System.Object or a configuration failed to resolve the entity type.");
-                Console.WriteLine("Run the diagnostic helper to find types implementing IEntityTypeConfiguration<object> or invalid configurations.");
+                _logger.LogWarning("EF Core detected an entity mapped as 'object'. This usually means a configuration class targets System.Object or a configuration failed to resolve the entity type.");
+                _logger.LogWarning("Run the diagnostic helper to find types implementing IEntityTypeConfiguration<object> or invalid configurations.");
             }
 
             if (problematic.Any())
             {
                 var list = string.Join(", ", problematic.Select(p => $"{p.Name} ({p.Namespace})"));
                 throw new InvalidOperationException($"EF model contains entity types without primary key (fix these models): {list}");
+            }
+        }
+
+        public override int SaveChanges()
+        {
+            ApplyAuditProperties();
+            return base.SaveChanges();
+        }
+
+        public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        {
+            ApplyAuditProperties();
+            return base.SaveChangesAsync(cancellationToken);
+        }
+
+        private void ApplyAuditProperties()
+        {
+            var entries = ChangeTracker.Entries()
+                .Where(e => e.Entity != null && (e.State == EntityState.Added || e.State == EntityState.Modified || e.State == EntityState.Deleted));
+
+            var now = DateTime.UtcNow;
+            foreach (var e in entries)
+            {
+                var propUpdatedAt = e.Metadata.FindProperty("UpdatedAt");
+                if (propUpdatedAt != null)
+                {
+                    e.CurrentValues["UpdatedAt"] = now;
+                }
+
+                if (e.State == EntityState.Added)
+                {
+                    var createdAt = e.Metadata.FindProperty("CreatedAt");
+                    if (createdAt != null)
+                    {
+                        e.CurrentValues["CreatedAt"] = now;
+                    }
+
+                    var createdBy = e.Metadata.FindProperty("CreatedBy");
+                    if (createdBy != null)
+                    {
+                        // CreatedBy will be set by the application when available. Leave null in automated/CLI contexts.
+                    }
+                }
+
+                if (e.State == EntityState.Deleted)
+                {
+                    // Soft delete: set IsDeleted and DeletedAt, change state to Modified
+                    var isDeleted = e.Metadata.FindProperty("IsDeleted");
+                    if (isDeleted != null)
+                    {
+                        e.CurrentValues["IsDeleted"] = true;
+                        var deletedAt = e.Metadata.FindProperty("DeletedAt");
+                        if (deletedAt != null) e.CurrentValues["DeletedAt"] = now;
+                        e.State = EntityState.Modified;
+                    }
+                }
             }
         }
 
@@ -189,14 +259,14 @@ namespace PublishRealLiteApi.Infrastructure.Data
 
                             if (entityType == null || entityType == typeof(object))
                             {
-                                Console.WriteLine($"Skipping configuration {cfg.Type.FullName} because it targets '{entityType?.FullName ?? "null"}'.");
+                                _logger.LogWarning("Skipping configuration {Cfg} because it targets {Entity}", cfg.Type.FullName, entityType?.FullName ?? "null");
                                 offendingConfigs.Add($"{cfg.Type.FullName} -> {entityType?.FullName ?? "<null>"}");
                                 continue;
                             }
 
                             if (entityType.Namespace == null || !entityType.Namespace.StartsWith("PublishRealLiteApi.Models", StringComparison.Ordinal))
                             {
-                                Console.WriteLine($"Skipping configuration {cfg.Type.FullName} because entity {entityType.FullName} is outside domain namespace.");
+                                _logger.LogInformation("Skipping configuration {Cfg} because entity {Entity} is outside domain namespace.", cfg.Type.FullName, entityType.FullName);
                                 continue;
                             }
 
@@ -212,7 +282,7 @@ namespace PublishRealLiteApi.Infrastructure.Data
                             }
 
                             applyConfigMethod.Invoke(builder, new[] { instance });
-                            Console.WriteLine($"Applied configuration {cfg.Type.FullName} for entity {entityType.FullName}.");
+                            _logger.LogInformation("Applied configuration {Cfg} for entity {Entity}", cfg.Type.FullName, entityType.FullName);
                         }
                         catch (TargetInvocationException tie)
                         {

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace PublishRealLiteApi.Models
 {
@@ -20,6 +19,11 @@ namespace PublishRealLiteApi.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        // Soft delete + audit
+        public bool IsDeleted { get; set; } = false;
+        public DateTime? DeletedAt { get; set; }
+        public string? CreatedBy { get; set; }
+        public string? UpdatedBy { get; set; }
         public ICollection<Release> Releases { get; set; } = new List<Release>();
         public ICollection<ArtistVideo> Videos { get; set; } = new List<ArtistVideo>();
     }
