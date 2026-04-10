@@ -28,7 +28,7 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<AppDbContext>();
 
         // Application services
-        services.AddScoped<ICurrentUserService, CurrentUserService>(); 
+        services.AddScoped<ICurrentUserService, CurrentUserService>();
         services.AddScoped<IReleaseService, ReleaseService>();
         services.AddScoped<IStatsService, StatsService>();
         services.AddScoped<ITeamService, TeamService>();

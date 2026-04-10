@@ -1,6 +1,4 @@
 ﻿using PublishRealLiteApi.DTOs;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 
 namespace PublishRealLiteApi.Application.Services.Interfaces
 {

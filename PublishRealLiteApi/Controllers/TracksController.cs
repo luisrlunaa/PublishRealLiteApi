@@ -1,10 +1,10 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using PublishRealLiteApi.Application.Services.Interfaces;
 using PublishRealLiteApi.DTOs;
 using PublishRealLiteApi.Infrastructure.Data;
 using PublishRealLiteApi.Models;
-using PublishRealLiteApi.Application.Services.Interfaces;
 
 namespace PublishRealLiteApi.Controllers
 {

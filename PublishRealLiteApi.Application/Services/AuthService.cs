@@ -1,6 +1,5 @@
 using PublishRealLiteApi.Application.Repositories.Interfaces;
 using PublishRealLiteApi.Application.Services.Interfaces;
-using System.Threading.Tasks;
 
 namespace PublishRealLiteApi.Application.Services
 {

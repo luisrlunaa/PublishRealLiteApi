@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace PublishRealLiteApi.DTOs
+﻿namespace PublishRealLiteApi.DTOs
 {
     public class ArtistVideoDto
     {

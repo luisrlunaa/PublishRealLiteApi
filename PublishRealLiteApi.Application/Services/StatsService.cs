@@ -2,10 +2,6 @@
 using PublishRealLiteApi.Application.Services.Interfaces;
 using PublishRealLiteApi.DTOs;
 using PublishRealLiteApi.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace PublishRealLiteApi.Application.Services
 {

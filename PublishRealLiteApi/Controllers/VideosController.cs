@@ -9,8 +9,8 @@ namespace PublishRealLiteApi.Controllers
     public class VideosController : ApiControllerBase
     {
         private readonly IArtistVideoService _service;
-        private readonly PublishRealLiteApi.Application.Services.Interfaces.IAuthService _auth;
-        public VideosController(IArtistVideoService service, PublishRealLiteApi.Application.Services.Interfaces.IAuthService auth, PublishRealLiteApi.Application.Services.Interfaces.ICurrentUserService currentUser) : base(currentUser)
+        private readonly IAuthService _auth;
+        public VideosController(IArtistVideoService service, IAuthService auth, ICurrentUserService currentUser) : base(currentUser)
         {
             _service = service;
             _auth = auth;
@@ -28,7 +28,7 @@ namespace PublishRealLiteApi.Controllers
                 var videos = await _service.GetByArtistProfileIdAsync(profileId);
                 return Ok(videos);
             }
-            catch (System.InvalidOperationException)
+            catch (Exception ex)
             {
                 return BadRequest("No artist profile found for current user");
             }

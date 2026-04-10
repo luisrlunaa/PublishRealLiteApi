@@ -5,6 +5,7 @@ namespace PublishRealLiteApi.Application.Services.Interfaces
         string? UserId { get; }
         string? UserName { get; }
         string? Email { get; }
+        bool IsAuthenticated { get; }
         bool IsAdmin { get; }
     }
 }

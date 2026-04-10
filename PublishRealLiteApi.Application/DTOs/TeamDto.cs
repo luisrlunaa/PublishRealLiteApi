@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-
-namespace PublishRealLiteApi.DTOs
+﻿namespace PublishRealLiteApi.DTOs
 {
     public class TeamDto
     {

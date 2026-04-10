@@ -1,5 +1,3 @@
-using System.Threading.Tasks;
-
 namespace PublishRealLiteApi.Application.Services.Interfaces
 {
     public interface IAuthService

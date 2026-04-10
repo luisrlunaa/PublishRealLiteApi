@@ -1,5 +1,4 @@
 ﻿using PublishRealLiteApi.Models;
-using System.Threading.Tasks;
 
 namespace PublishRealLiteApi.Application.Repositories.Interfaces
 {
