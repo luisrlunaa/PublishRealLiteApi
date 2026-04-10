@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Http;
 using PublishRealLiteApi.Application.Services.Interfaces;
 using System.Security.Claims;
 
-namespace PublishRealLiteApi.Services;
+namespace PublishRealLiteApi.Application.Services;
 
 public class CurrentUserService : ICurrentUserService
 {

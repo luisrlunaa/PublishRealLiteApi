@@ -64,16 +64,25 @@ class ApiClient {
       let errors: string[] | undefined;
 
       try {
-        const errorData = await response.json();
-        if (Array.isArray(errorData)) {
-          errors = errorData;
-          errorMessage = errorData.join(", ");
-        } else if (errorData.message) {
-          errorMessage = errorData.message;
-        } else if (typeof errorData === "string") {
-          errorMessage = errorData;
+        // First, check if the response is JSON
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.includes("application/json")) {
+          const errorData = await response.json();
+          if (Array.isArray(errorData)) {
+            errors = errorData;
+            errorMessage = errorData.join(", ");
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          } else if (typeof errorData === "string") {
+            errorMessage = errorData;
+          }
+        } else {
+          // If it's NOT JSON (like a .NET Developer Exception HTML page), grab the text
+          const errorText = await response.text();
+          console.error("Raw API Error Response:", errorText); // Logs the C# crash to your browser console
+          errorMessage = `Server Error (${response.status}): Check browser console for .NET Stack Trace.`;
         }
-      } catch {
+      } catch (e) {
         errorMessage = response.statusText;
       }
 
@@ -305,8 +314,5 @@ class ApiClient {
   }
 }
 
-// Export a singleton instance
 export const apiClient = new ApiClient();
-
-// Export the class for custom instances
 export { ApiClient };

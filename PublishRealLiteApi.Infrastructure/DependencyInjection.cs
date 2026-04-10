@@ -12,18 +12,6 @@ using PublishRealLiteApi.Infrastructure.Repositories;
 
 namespace PublishRealLiteApi.Infrastructure;
 
-/// <summary>
-/// Extension method for registering infrastructure-layer services.
-/// 
-/// IMPORTANT: ICurrentUserService must be registered in Program.cs BEFORE calling this method.
-/// This ensures that:
-/// 1. The Application layer (e.g., AuthService) can depend on ICurrentUserService
-/// 2. There's a single clear point of registration in Program.cs
-/// 3. Dependency direction flows from Infrastructure → Application → Core
-/// 
-/// If you need to move ICurrentUserService registration here, ensure it's done with AddScoped,
-/// not TryAddScoped, and that it's registered before Infrastructure services that depend on it.
-/// </summary>
 public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration config)
@@ -40,6 +28,7 @@ public static class DependencyInjection
             .AddEntityFrameworkStores<AppDbContext>();
 
         // Application services
+        services.AddScoped<ICurrentUserService, CurrentUserService>(); 
         services.AddScoped<IReleaseService, ReleaseService>();
         services.AddScoped<IStatsService, StatsService>();
         services.AddScoped<ITeamService, TeamService>();
