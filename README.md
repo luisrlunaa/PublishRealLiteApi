@@ -1,226 +1,277 @@
-# 🎵 PublishRealLiteApi  
-### La infraestructura que empodera a artistas independientes con datos, control y autonomía.
-
-PublishRealLiteApi es la base tecnológica de una plataforma moderna diseñada para resolver uno de los mayores problemas de los artistas independientes:  
-**la falta de un panel centralizado donde puedan ver su música, estadísticas, ingresos y equipo en un solo lugar.**
-
-Inspirado en plataformas como **DistroKid**, **Spotify for Artists** y **UnitedMasters**, este backend ofrece una arquitectura sólida, escalable y lista para integrarse con un frontend profesional.
+# 🎵 PublishReal  
+La plataforma que empodera a los artistas independientes.  
+The platform that empowers independent artists.
 
 ---
 
-# 🌟 Visión del Proyecto
+# 🌐 Bilingual Overview / Resumen Bilingüe
 
-Crear un ecosistema donde cualquier artista —sin importar su tamaño o presupuesto— pueda:
+<details>
+<summary><strong>🇪🇸 Español</strong></summary>
 
-- Controlar su identidad artística  
+## 🎵 PublishReal  
+PublishReal es una plataforma moderna diseñada para centralizar todo lo que un artista independiente necesita para gestionar su carrera musical.  
+Combina herramientas profesionales en un solo ecosistema, eliminando la necesidad de usar múltiples plataformas desconectadas.
+
+---
+
+## 🌟 Visión  
+Crear un espacio donde cualquier artista —sin importar su nivel o presupuesto— pueda administrar su identidad, su música, su equipo y sus estadísticas desde un solo panel intuitivo y profesional.
+
+PublishReal busca democratizar herramientas que antes solo estaban disponibles para grandes sellos.
+
+---
+
+## 🚀 ¿Qué es PublishReal?  
+PublishReal permite a los artistas:
+
+- Gestionar su perfil profesional  
 - Administrar su catálogo musical  
-- Subir contenido promocional  
-- Analizar su crecimiento con métricas reales  
-- Gestionar su equipo de trabajo  
-- Tomar decisiones basadas en datos  
+- Subir y organizar videos promocionales  
+- Analizar estadísticas reales de streams  
+- Colaborar con su equipo de trabajo  
+- Prepararse para futuras funciones de distribución y monetización  
 
-Todo desde una sola plataforma.
-
-La misión es **democratizar el acceso a herramientas profesionales**, permitiendo que artistas emergentes tengan el mismo nivel de control que un artista firmado con un sello discográfico.
+Todo desde un solo lugar.
 
 ---
 
-# 💼 ¿Qué problema resuelve?
+# 🎧 Funcionalidades Principales
 
-Hoy en día, los artistas deben usar múltiples plataformas:
+## 🎤 Perfil Artístico  
+Un espacio profesional donde el artista controla su identidad:
 
-- Una para distribuir música  
-- Otra para ver estadísticas  
-- Otra para manejar su equipo  
-- Otra para contenido promocional  
-- Otra para almacenar archivos  
-
-Esto fragmenta su operación, complica su crecimiento y limita su capacidad de tomar decisiones.
-
-**PublishRealLiteApi unifica todo en un solo backend.**
+- Foto, biografía y redes  
+- Estilo musical  
+- Catálogo completo  
+- Videos y contenido promocional  
 
 ---
 
-# 🚀 ¿Qué ofrece la plataforma?
+## 🎼 Música (Releases & Tracks)  
+Un módulo inspirado en plataformas como DistroKid:
 
-## ✔ Gestión de Perfil Artístico
-Cada artista tiene un perfil profesional que centraliza:
-
-- Identidad  
-- Lanzamientos  
-- Videos  
-- Equipo  
-- Estadísticas  
-
----
-
-## ✔ Módulo de Música (Releases & Tracks)
-Permite a los artistas:
-
-- Crear y administrar lanzamientos  
+- Crear lanzamientos  
+- Agregar canciones  
 - Subir portadas  
-- Organizar canciones  
-- Mantener un catálogo limpio y profesional  
-
-Ideal para integrarse con un frontend tipo **DistroKid MyMusic**.
+- Mantener un catálogo organizado y profesional  
 
 ---
 
-## ✔ Módulo de Videos Promocionales
-Los artistas pueden:
+## 🎬 Videos Promocionales  
+Ideal para campañas y contenido social:
 
-- Subir videos  
-- Organizar contenido promocional  
-- Mostrar clips, trailers o reels  
-
-Perfecto para dashboards modernos.
+- Subida de clips, reels y trailers  
+- Organización por categorías  
+- Integración con el perfil del artista  
 
 ---
 
-## ✔ Módulo de Estadísticas (StreamStats)
-Un sistema tipo **Spotify for Artists**, donde el artista puede ver:
+## 📊 Estadísticas de Streams  
+Un panel tipo *Spotify for Artists*:
 
 - Streams por plataforma  
 - Streams por país  
 - Tendencias por fecha  
-- Métricas clave  
-
-Esto permite decisiones basadas en datos reales.
+- Crecimiento histórico  
 
 ---
 
-## ✔ Módulo de Equipos (Teams)
-Los artistas pueden:
+## 👥 Equipos y Colaboradores  
+Gestión profesional del equipo del artista:
 
-- Crear su equipo  
-- Invitar managers, editores o colaboradores  
-- Asignar roles y permisos  
-- Gestionar participación y acceso  
-
-Un sistema similar al de **DistroKid Teams**.
+- Invitaciones por rol  
+- Permisos personalizados  
+- Colaboración segura  
+- Control de accesos  
 
 ---
 
-# 🧩 Arquitectura Técnica
+# 🧩 Arquitectura del Sistema  
+El backend está construido con:
 
-- **ASP.NET Core 10**  
-- **Entity Framework Core (Code First)**  
-- **Identity + JWT** para autenticación segura  
-- **SQL Server** como base de datos  
-- **Controladores REST** para cada módulo  
-- **Servicios desacoplados** para lógica de negocio  
-- **DTOs** para transporte limpio de datos  
-- **Swagger / Scalar** para documentación interactiva  
-
-La arquitectura está diseñada para escalar y soportar:
-
-- Miles de artistas  
-- Millones de estadísticas  
-- Integraciones con proveedores externos  
+- ASP.NET Core 10  
+- Entity Framework Core (Code First)  
+- Identity + JWT  
+- SQL Server  
+- Controladores REST  
+- Documentación interactiva con Swagger/Scalar  
 
 ---
 
-# 📈 Oportunidad de Negocio
+# 🧭 Roadmap  
+PublishReal evolucionará hacia un ecosistema completo:
 
-PublishRealLiteApi puede convertirse en la base de:
-
-### ✔ Un SaaS para artistas independientes  
-### ✔ Una plataforma de distribución musical  
-### ✔ Un dashboard de estadísticas multi-plataforma  
-### ✔ Un sistema de gestión de equipos creativos  
-### ✔ Un hub de contenido promocional  
-
-El mercado de herramientas para artistas independientes está creciendo rápidamente, impulsado por:
-
-- La explosión del streaming  
-- La independencia creativa  
-- La necesidad de datos  
-- La descentralización de la industria  
-
-Este backend está diseñado para capturar esa oportunidad.
+- Distribución musical  
+- Reportes financieros  
+- Pagos automáticos y splits  
+- Integración con plataformas de streaming  
+- Inteligencia artificial para análisis de audiencia  
+- Herramientas de marketing automatizado  
 
 ---
 
-# 🧱 Componentes del Sistema (Modelos)
-
-## **AppUser**
-Usuario autenticado del sistema (Identity).
-
-## **ArtistProfile**
-Perfil profesional del artista.  
-Es el núcleo del ecosistema.
-
-## **Release**
-Lanzamiento musical (álbum, EP, single).
-
-## **Track**
-Canción individual dentro de un release.
-
-## **ArtistVideo**
-Videos promocionales del artista.
-
-## **Team**
-Equipo del artista (managers, colaboradores, etc.).
-
-## **TeamMember**
-Miembro del equipo con rol y permisos.
-
-## **TeamInvite**
-Invitaciones enviadas a nuevos miembros.
-
-## **StreamStat**
-Estadísticas de streams por plataforma, país y fecha.
-
----
-
-# 🎮 Componentes del Sistema (Controladores)
-
-## **AuthController**
-Autenticación y generación de tokens JWT.
-
-## **ArtistProfilesController**
-Gestión del perfil del artista.
-
-## **ReleasesController**
-Administración de lanzamientos musicales.
-
-## **TracksController**
-Gestión de canciones dentro de un release.
-
-## **VideosController**
-Administración de videos promocionales.
-
-## **TeamsController**
-Gestión del equipo del artista.
-
-## **TeamInvitesController**
-Invitaciones y acceso colaborativo.
-
-## **StatsController**
-Estadísticas de streams y métricas.
-
----
-
-# 🏁 Estado del Proyecto
-
-El backend está en desarrollo activo y ya cuenta con:
+# 🏁 Estado Actual  
+El backend ya incluye:
 
 - Autenticación completa  
-- Modelos funcionales  
-- Controladores REST  
-- Relaciones EF Core  
-- Arquitectura escalable  
-
-Próximos pasos:
-
-- Integración con proveedores de streaming  
-- Dashboard avanzado  
-- Sistema de notificaciones  
-- Integración con almacenamiento en la nube  
+- Gestión de artistas  
+- Gestión de música  
+- Gestión de videos  
+- Gestión de equipos  
+- Estadísticas  
+- Arquitectura escalable lista para producción  
 
 ---
 
-# 📬 Contacto
+# 🤝 ¿Para quién es PublishReal?  
+- Artistas independientes  
+- Managers  
+- Productores  
+- Sellos pequeños  
+- Creadores de contenido  
+- Equipos musicales emergentes  
 
-Proyecto desarrollado por **Luis Luna**.  
-Ideal para inversionistas, colaboradores y equipos interesados en construir la próxima gran plataforma para artistas independientes.
+---
+
+# 📬 Contacto  
+Proyecto creado por **Luis Luna**.  
+Disponible para colaboración, inversión y expansión tecnológica.
+
+</details>
+
+---
+
+<details>
+<summary><strong>🇺🇸 English</strong></summary>
+
+## 🎵 PublishReal  
+PublishReal is a modern platform designed to centralize everything an independent artist needs to manage their music career.  
+It brings professional tools together into one ecosystem, eliminating the need to jump between multiple disconnected services.
+
+---
+
+## 🌟 Vision  
+To create a space where any artist —regardless of budget or experience— can manage their identity, music, team, and analytics from a single, intuitive, professional dashboard.
+
+PublishReal aims to democratize tools that were once exclusive to major labels.
+
+---
+
+## 🚀 What is PublishReal?  
+PublishReal allows artists to:
+
+- Manage their professional profile  
+- Organize their full music catalog  
+- Upload and manage promotional videos  
+- Analyze real streaming statistics  
+- Collaborate with their team  
+- Prepare for future distribution and monetization features  
+
+All in one place.
+
+---
+
+# 🎧 Key Features
+
+## 🎤 Artist Profile  
+A professional space where artists control their identity:
+
+- Photo, bio, and social links  
+- Musical style  
+- Full catalog  
+- Promotional videos  
+
+---
+
+## 🎼 Music (Releases & Tracks)  
+A module inspired by platforms like DistroKid:
+
+- Create releases  
+- Add tracks  
+- Upload cover art  
+- Maintain a clean, organized catalog  
+
+---
+
+## 🎬 Promotional Videos  
+Perfect for campaigns and social content:
+
+- Upload clips, reels, and trailers  
+- Organize by category  
+- Integrate with the artist profile  
+
+---
+
+## 📊 Streaming Statistics  
+A *Spotify for Artists*-style analytics panel:
+
+- Streams by platform  
+- Streams by country  
+- Trends by date  
+- Growth over time  
+
+---
+
+## 👥 Teams & Collaborators  
+Professional team management:
+
+- Role-based invitations  
+- Custom permissions  
+- Secure collaboration  
+- Access control  
+
+---
+
+# 🧩 System Architecture  
+The backend is built with:
+
+- ASP.NET Core 10  
+- Entity Framework Core (Code First)  
+- Identity + JWT  
+- SQL Server  
+- REST controllers  
+- Interactive documentation with Swagger/Scalar  
+
+---
+
+# 🧭 Roadmap  
+PublishReal will evolve into a complete ecosystem:
+
+- Music distribution  
+- Financial reporting  
+- Automatic payments and splits  
+- Streaming platform integrations  
+- AI-powered audience insights  
+- Automated marketing tools  
+
+---
+
+# 🏁 Current Status  
+The backend already includes:
+
+- Full authentication  
+- Artist management  
+- Music management  
+- Video management  
+- Team management  
+- Streaming statistics  
+- Scalable production-ready architecture  
+
+---
+
+# 🤝 Who is PublishReal for?  
+- Independent artists  
+- Managers  
+- Producers  
+- Small labels  
+- Content creators  
+- Emerging music teams  
+
+---
+
+# 📬 Contact  
+Project created by **Luis Luna**.  
+Open for collaboration, investment, and technological expansion.
+
+</details>
