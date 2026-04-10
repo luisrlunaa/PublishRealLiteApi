@@ -1,6 +1,6 @@
-using PublishRealLiteApi.Services.Interfaces;
+using Microsoft.AspNetCore.Http;
+using PublishRealLiteApi.Application.Services.Interfaces;
 using System.Security.Claims;
-
 
 namespace PublishRealLiteApi.Services;
 
@@ -16,26 +16,21 @@ public class CurrentUserService : ICurrentUserService
     private ClaimsPrincipal? User => _httpContextAccessor.HttpContext?.User;
 
     public string? UserId =>
-        User?.FindFirstValue(ClaimTypes.NameIdentifier) ??
-        User?.FindFirstValue("sub");
-
-    public string? UserName =>
-        User?.FindFirstValue(ClaimTypes.Name) ??
-        User?.Identity?.Name;
+        User?.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? User?.FindFirstValue("sub");
 
     public string? Email =>
-        User?.FindFirstValue(ClaimTypes.Email);
+        User?.FindFirstValue(ClaimTypes.Email)
+        ?? User?.FindFirstValue("email");
 
-    public bool IsAdmin
-    {
-        get
-        {
-            if (User == null) return false;
-            // Comprueba ClaimTypes.Role y también "role" por compatibilidad con JWT
-            var roles = User.FindAll(ClaimTypes.Role).Select(c => c.Value)
-                        .Concat(User.FindAll("role").Select(c => c.Value));
-            return roles.Any(r => string.Equals(r, "admin", StringComparison.OrdinalIgnoreCase)
-                               || string.Equals(r, "administrator", StringComparison.OrdinalIgnoreCase));
-        }
-    }
+    public string? UserName =>
+        User?.FindFirstValue(ClaimTypes.Name)
+        ?? User?.FindFirstValue("name");
+
+    public bool IsAuthenticated =>
+        User?.Identity?.IsAuthenticated == true;
+
+    public bool IsAdmin =>
+        User?.IsInRole("Admin") == true
+        || User?.FindAll(ClaimTypes.Role).Any(c => c.Value == "Admin") == true;
 }
