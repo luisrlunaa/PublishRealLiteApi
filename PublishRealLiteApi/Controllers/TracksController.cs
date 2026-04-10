@@ -4,15 +4,16 @@ using Microsoft.EntityFrameworkCore;
 using PublishRealLiteApi.DTOs;
 using PublishRealLiteApi.Infrastructure.Data;
 using PublishRealLiteApi.Models;
+using PublishRealLiteApi.Application.Services.Interfaces;
 
 namespace PublishRealLiteApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class TracksController : ControllerBase
+    public class TracksController : ApiControllerBase
     {
         private readonly AppDbContext _db;
-        public TracksController(AppDbContext db) => _db = db;
+        public TracksController(AppDbContext db, ICurrentUserService currentUser) : base(currentUser) => _db = db;
 
         [HttpGet("by-release/{releaseId:guid}")]
         public async Task<IActionResult> GetByRelease(Guid releaseId)
@@ -30,8 +31,9 @@ namespace PublishRealLiteApi.Controllers
             if (release == null) return BadRequest("Release not found");
 
             var profile = await _db.ArtistProfiles.FindAsync(release.ArtistProfileId);
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            var isAdmin = User.IsInRole("Admin");
+            var userId = CurrentUser.UserId;
+            if (userId == null) return Unauthorized();
+            var isAdmin = CurrentUser.IsAdmin;
             if (!isAdmin && profile?.UserId != userId) return Forbid();
 
             var track = new Track { ReleaseId = dto.ReleaseId, Position = dto.Position, Title = dto.Title };
@@ -49,8 +51,9 @@ namespace PublishRealLiteApi.Controllers
 
             var release = await _db.Releases.FindAsync(track.ReleaseId);
             var profile = await _db.ArtistProfiles.FindAsync(release?.ArtistProfileId);
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            var isAdmin = User.IsInRole("Admin");
+            var userId = CurrentUser.UserId;
+            if (userId == null) return Unauthorized();
+            var isAdmin = CurrentUser.IsAdmin;
             if (!isAdmin && profile?.UserId != userId) return Forbid();
 
             track.Position = track.Position;
@@ -70,8 +73,8 @@ namespace PublishRealLiteApi.Controllers
 
             var release = await _db.Releases.FindAsync(track.ReleaseId);
             var profile = await _db.ArtistProfiles.FindAsync(release?.ArtistProfileId);
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            var isAdmin = User.IsInRole("Admin");
+            var userId = CurrentUser.UserId;
+            var isAdmin = CurrentUser.IsAdmin;
             if (!isAdmin && profile?.UserId != userId) return Forbid();
 
             _db.Tracks.Remove(track);

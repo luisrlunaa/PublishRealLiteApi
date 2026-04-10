@@ -1,71 +1,69 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using PublishRealLiteApi.Application.Services.Interfaces;
 using PublishRealLiteApi.DTOs;
-using PublishRealLiteApi.Infrastructure.Data;
-using PublishRealLiteApi.Models;
-using PublishRealLiteApi.Services.Interfaces;
-using System.Security.Claims;
 
 namespace PublishRealLiteApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class VideosController : ControllerBase
+    public class VideosController : ApiControllerBase
     {
-        private readonly AppDbContext _db;
-        private readonly IUploadService _upload;
-        public VideosController(AppDbContext db, IUploadService upload) { _db = db; _upload = upload; }
+        private readonly IArtistVideoService _service;
+        private readonly PublishRealLiteApi.Application.Services.Interfaces.IAuthService _auth;
+        public VideosController(IArtistVideoService service, PublishRealLiteApi.Application.Services.Interfaces.IAuthService auth, PublishRealLiteApi.Application.Services.Interfaces.ICurrentUserService currentUser) : base(currentUser)
+        {
+            _service = service;
+            _auth = auth;
+        }
 
         [HttpGet("mine")]
         public async Task<IActionResult> GetMine()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var profile = await _db.ArtistProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
-            if (profile == null) return NotFound();
-            var videos = await _db.ArtistVideos.Where(v => v.ArtistProfileId == profile.Id).ToListAsync();
-            return Ok(videos);
+            var userId = CurrentUser.UserId;
+            if (userId == null) return Unauthorized();
+            // Use AuthService to resolve current user's profile id
+            try
+            {
+                var profileId = await _auth.GetProfileIdAsync();
+                var videos = await _service.GetByArtistProfileIdAsync(profileId);
+                return Ok(videos);
+            }
+            catch (System.InvalidOperationException)
+            {
+                return BadRequest("No artist profile found for current user");
+            }
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] ArtistVideoDto dto)
+        public async Task<IActionResult> Create([FromBody] CreateArtistVideoDto dto)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            var profile = await _db.ArtistProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
-            if (profile == null) return NotFound();
-
-            var v = new ArtistVideo
-            {
-                ArtistProfileId = profile.Id,
-                Title = dto.Title,
-                ThumbnailUrl = dto.ThumbnailUrl,
-                VideoUrl = dto.VideoUrl
-            };
-            _db.ArtistVideos.Add(v);
-            await _db.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetMine), new { id = v.Id }, v);
+            var userId = CurrentUser.UserId;
+            if (userId == null) return Unauthorized();
+            var isAdmin = CurrentUser.IsAdmin;
+            var video = await _service.CreateAsync(dto, userId!, isAdmin);
+            return CreatedAtAction(nameof(GetMine), new { id = video.Id }, video);
         }
 
         [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] ArtistVideoDto dto)
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateArtistVideoDto dto)
         {
-            var v = await _db.ArtistVideos.FindAsync(id);
-            if (v == null) return NotFound();
-            v.Title = dto.Title;
-            v.ThumbnailUrl = dto.ThumbnailUrl;
-            v.VideoUrl = dto.VideoUrl;
-            await _db.SaveChangesAsync();
+            var userId = CurrentUser.UserId;
+            if (userId == null) return Unauthorized();
+            var isAdmin = CurrentUser.IsAdmin;
+            var ok = await _service.UpdateAsync(id, dto, userId!, isAdmin);
+            if (!ok) return Forbid();
             return NoContent();
         }
 
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var v = await _db.ArtistVideos.FindAsync(id);
-            if (v == null) return NotFound();
-            _db.ArtistVideos.Remove(v);
-            await _db.SaveChangesAsync();
+            var userId = CurrentUser.UserId;
+            if (userId == null) return Unauthorized();
+            var isAdmin = CurrentUser.IsAdmin;
+            var ok = await _service.DeleteAsync(id, userId!, isAdmin);
+            if (!ok) return Forbid();
             return NoContent();
         }
     }
-
 }

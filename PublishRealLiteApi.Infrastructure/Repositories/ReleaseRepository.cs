@@ -26,6 +26,13 @@ namespace PublishRealLiteApi.Infrastructure.Persistence.Repositories
                 .FirstOrDefaultAsync(r => r.Id == id && r.ArtistProfileId == artistProfileId);
         }
 
+        public async Task<Release?> GetByIdAsync(Guid id)
+        {
+            return await _db.Releases
+                .Include(r => r.Tracks)
+                .FirstOrDefaultAsync(r => r.Id == id);
+        }
+
         public async Task<Release> AddAsync(Release release)
         {
             _db.Releases.Add(release);

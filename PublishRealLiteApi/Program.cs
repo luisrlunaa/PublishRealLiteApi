@@ -12,6 +12,10 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// HttpContext accessor and current user service for auditing (register early so application services can depend on it)
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUserService, PublishRealLiteApi.Services.CurrentUserService>();
+
 // Core services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -19,6 +23,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddAutoMapper(typeof(Program).Assembly);
 
 // Infrastructure (DbContext, Identity, repos, health checks)
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // App services
@@ -84,9 +89,6 @@ builder.Services.AddCors(options =>
 // Rate limiting and memory cache
 builder.Services.AddMemoryCache();
 builder.Services.AddSingleton<SimpleRateLimitMiddleware>();
-// HttpContext accessor and current user service for auditing
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<PublishRealLiteApi.Services.ICurrentUserService, PublishRealLiteApi.Services.CurrentUserService>();
 // Background worker for stats aggregation
 builder.Services.AddHostedService<PublishRealLiteApi.Workers.StreamStatAggregatorWorker>();
 // Aggregator service for manual invocation
@@ -137,51 +139,51 @@ using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var logger = services.GetRequiredService<ILogger<Program>>();
-        // E: List IEntityTypeConfiguration<> implementations across PublishRealLiteApi assemblies for diagnostics
-        try
+    // E: List IEntityTypeConfiguration<> implementations across PublishRealLiteApi assemblies for diagnostics
+    try
+    {
+        var asmList = AppDomain.CurrentDomain.GetAssemblies()
+            .Where(a => !a.IsDynamic && a.FullName != null && a.FullName.StartsWith("PublishRealLiteApi", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+        logger.LogInformation("Scanning {Count} assemblies for IEntityTypeConfiguration<> implementations...", asmList.Count);
+
+        var found = new List<string>();
+        foreach (var asm in asmList)
         {
-            var asmList = AppDomain.CurrentDomain.GetAssemblies()
-                .Where(a => !a.IsDynamic && a.FullName != null && a.FullName.StartsWith("PublishRealLiteApi", StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            logger.LogInformation("Scanning {Count} assemblies for IEntityTypeConfiguration<> implementations...", asmList.Count);
-
-            var found = new List<string>();
-            foreach (var asm in asmList)
+            Type[] types;
+            try
             {
-                Type[] types;
-                try
-                {
-                    types = asm.GetTypes();
-                }
-                catch (ReflectionTypeLoadException rtle)
-                {
-                    types = rtle.Types.Where(t => t != null).ToArray()!;
-                }
-
-                foreach (var t in types.Where(t => t != null && !t.IsAbstract && !t.IsInterface))
-                {
-                    var ifaces = t.GetInterfaces()
-                        .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<>))
-                        .ToArray();
-                    if (ifaces.Length == 0) continue;
-
-                    foreach (var iface in ifaces)
-                    {
-                        var ent = iface.GetGenericArguments()[0];
-                        var entry = $"{asm.GetName().Name}: {t.FullName} -> IEntityTypeConfiguration<{ent.FullName}>";
-                        found.Add(entry);
-                        logger.LogInformation(entry);
-                    }
-                }
+                types = asm.GetTypes();
+            }
+            catch (ReflectionTypeLoadException rtle)
+            {
+                types = rtle.Types.Where(t => t != null).ToArray()!;
             }
 
-            if (!found.Any()) logger.LogInformation("No IEntityTypeConfiguration<> implementations found in PublishRealLiteApi assemblies.");
+            foreach (var t in types.Where(t => t != null && !t.IsAbstract && !t.IsInterface))
+            {
+                var ifaces = t.GetInterfaces()
+                    .Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(Microsoft.EntityFrameworkCore.IEntityTypeConfiguration<>))
+                    .ToArray();
+                if (ifaces.Length == 0) continue;
+
+                foreach (var iface in ifaces)
+                {
+                    var ent = iface.GetGenericArguments()[0];
+                    var entry = $"{asm.GetName().Name}: {t.FullName} -> IEntityTypeConfiguration<{ent.FullName}>";
+                    found.Add(entry);
+                    logger.LogInformation(entry);
+                }
+            }
         }
-        catch (Exception ex)
-        {
-            logger.LogWarning(ex, "Error while scanning assemblies for IEntityTypeConfiguration<> implementations");
-        }
+
+        if (!found.Any()) logger.LogInformation("No IEntityTypeConfiguration<> implementations found in PublishRealLiteApi assemblies.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Error while scanning assemblies for IEntityTypeConfiguration<> implementations");
+    }
     try
     {
         var db = services.GetRequiredService<AppDbContext>();

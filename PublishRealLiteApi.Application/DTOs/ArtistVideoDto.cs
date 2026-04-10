@@ -10,6 +10,18 @@ namespace PublishRealLiteApi.DTOs
         public string ThumbnailUrl { get; set; } = string.Empty;
         public string VideoUrl { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
+
+        public ArtistVideoDto() { }
+
+        public ArtistVideoDto(int id, int artistProfileId, string title, string thumbnailUrl, string videoUrl)
+        {
+            Id = id;
+            ArtistProfileId = artistProfileId;
+            Title = title;
+            ThumbnailUrl = thumbnailUrl;
+            VideoUrl = videoUrl;
+            CreatedAt = DateTime.UtcNow;
+        }
     }
 
 }

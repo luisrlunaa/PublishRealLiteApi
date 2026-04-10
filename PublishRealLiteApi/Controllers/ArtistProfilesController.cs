@@ -1,93 +1,65 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
+using PublishRealLiteApi.Application.Services.Interfaces;
 using PublishRealLiteApi.DTOs;
-using PublishRealLiteApi.Infrastructure.Data;
-using PublishRealLiteApi.Models;
 
 namespace PublishRealLiteApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class ArtistProfilesController : ControllerBase
+    public class ArtistProfilesController : ApiControllerBase
     {
-        private readonly AppDbContext _db;
-        public ArtistProfilesController(AppDbContext db) => _db = db;
+        private readonly IArtistProfileService _service;
+        public ArtistProfilesController(IArtistProfileService service, ICurrentUserService currentUser) : base(currentUser)
+        {
+            _service = service;
+        }
 
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
-            var list = await _db.ArtistProfiles
-            .Select(p => new ArtistProfileDto(p.Id, p.ArtistName, p.Bio, p.ProfileImageUrl, p.SocialLinksJson))
-            .ToListAsync();
+            var list = await _service.GetAllAsync();
             return Ok(list);
         }
 
-        [HttpGet("{id:guid}")]
-        public async Task<IActionResult> Get(Guid id)
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> Get(int id)
         {
-            var p = await _db.ArtistProfiles.FindAsync(id);
+            var p = await _service.GetByIdAsync(id);
             if (p == null) return NotFound();
-            return Ok(new ArtistProfileDto(p.Id, p.ArtistName, p.Bio, p.ProfileImageUrl, p.SocialLinksJson));
+            return Ok(p);
         }
 
         [Authorize]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateArtistDto dto)
         {
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var userId = CurrentUser.UserId;
             if (userId == null) return Unauthorized();
-
-            // Avoid duplicates per user 
-            if (await _db.ArtistProfiles.AnyAsync(x => x.UserId == userId))
-                return BadRequest("The user already has a profile.");
-
-            var profile = new ArtistProfile
-            {
-                UserId = userId,
-                ArtistName = dto.ArtistName,
-                Bio = dto.Bio,
-                SocialLinksJson = dto.SocialLinksJson
-            };
-
-            _db.ArtistProfiles.Add(profile);
-            await _db.SaveChangesAsync();
-            return CreatedAtAction(nameof(Get), new { id = profile.Id }, profile);
+            var result = await _service.CreateAsync(userId, dto);
+            if (result == null) return BadRequest("The user already has a profile.");
+            return CreatedAtAction(nameof(Get), new { id = result.Id }, result);
         }
 
         [Authorize]
-        [HttpPut("{id:guid}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateArtistDto dto)
+        [HttpPut("{id:int}")]
+        public async Task<IActionResult> Update(int id, [FromBody] UpdateArtistDto dto)
         {
-            var profile = await _db.ArtistProfiles.FindAsync(id);
-            if (profile == null) return NotFound();
-
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            var isAdmin = User.IsInRole("Admin");
-            if (!isAdmin && profile.UserId != userId) return Forbid();
-
-            profile.ArtistName = dto.ArtistName;
-            profile.Bio = dto.Bio;
-            profile.SocialLinksJson = dto.SocialLinksJson;
-            profile.UpdatedAt = DateTime.UtcNow;
-
-            await _db.SaveChangesAsync();
+            var userId = CurrentUser.UserId;
+            var isAdmin = CurrentUser.IsAdmin;
+            var ok = await _service.UpdateAsync(id, userId!, isAdmin, dto);
+            if (!ok) return Forbid();
             return NoContent();
         }
 
         [Authorize]
-        [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> Delete(Guid id)
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> Delete(int id)
         {
-            var profile = await _db.ArtistProfiles.FindAsync(id);
-            if (profile == null) return NotFound();
-
-            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            var isAdmin = User.IsInRole("Admin");
-            if (!isAdmin && profile.UserId != userId) return Forbid();
-
-            _db.ArtistProfiles.Remove(profile);
-            await _db.SaveChangesAsync();
+            var userId = CurrentUser.UserId;
+            var isAdmin = CurrentUser.IsAdmin;
+            var ok = await _service.DeleteAsync(id, userId!, isAdmin);
+            if (!ok) return Forbid();
             return NoContent();
         }
     }

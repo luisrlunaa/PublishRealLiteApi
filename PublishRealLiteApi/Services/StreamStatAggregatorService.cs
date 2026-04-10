@@ -1,10 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 using PublishRealLiteApi.Infrastructure.Data;
-using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace PublishRealLiteApi.Services
 {

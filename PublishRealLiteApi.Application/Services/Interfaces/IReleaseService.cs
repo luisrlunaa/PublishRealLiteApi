@@ -1,4 +1,4 @@
-﻿using PublishRealLiteApi.Models;
+﻿using PublishRealLiteApi.DTOs;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -7,10 +7,10 @@ namespace PublishRealLiteApi.Application.Services.Interfaces
 {
     public interface IReleaseService
     {
-        Task<IEnumerable<Release>> GetReleasesAsync(int artistProfileId);
-        Task<Release?> GetReleaseByIdAsync(Guid id, int artistProfileId);
-        Task<Release> CreateReleaseAsync(Release release);
-        Task<bool> UpdateReleaseAsync(Release release);
-        Task<bool> DeleteReleaseAsync(Guid id, int artistProfileId);
+        Task<IEnumerable<ReleaseDto>> GetAllAsync();
+        Task<ReleaseDto?> GetByIdAsync(Guid id);
+        Task<ReleaseDto?> CreateAsync(string userId, bool isAdmin, CreateReleaseDto dto);
+        Task<bool> UpdateAsync(Guid id, string userId, bool isAdmin, UpdateReleaseDto dto);
+        Task<bool> DeleteAsync(Guid id, string userId, bool isAdmin);
     }
 }

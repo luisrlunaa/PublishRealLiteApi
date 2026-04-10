@@ -2,21 +2,21 @@
 using Microsoft.EntityFrameworkCore;
 using PublishRealLiteApi.Application.Services.Interfaces;
 using PublishRealLiteApi.Infrastructure.Data;
-using System.Security.Claims;
 
 namespace PublishRealLiteApi.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class TeamsController : ControllerBase
+    public class TeamsController : ApiControllerBase
     {
         private readonly ITeamService _teams;
-        public TeamsController(ITeamService teams) => _teams = teams;
+        public TeamsController(ITeamService teams, ICurrentUserService currentUser) : base(currentUser) => _teams = teams;
 
         [HttpGet("mine")]
         public async Task<IActionResult> Mine()
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = CurrentUser.UserId;
+            if (userId == null) return Unauthorized();
             var profileId = await GetProfileIdForUser(userId);
             var teams = await _teams.GetTeamsForArtistAsync(profileId);
             return Ok(teams);
@@ -25,7 +25,8 @@ namespace PublishRealLiteApi.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateTeamRequest req)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var userId = CurrentUser.UserId;
+            if (userId == null) return Unauthorized();
             var profileId = await GetProfileIdForUser(userId);
             var team = await _teams.CreateTeamAsync(profileId, req.Name);
             return CreatedAtAction(nameof(Mine), new { id = team.Id }, team);
@@ -41,7 +42,7 @@ namespace PublishRealLiteApi.Controllers
         [HttpPost("accept")]
         public async Task<IActionResult> Accept([FromQuery] string token)
         {
-            var email = User.FindFirstValue(ClaimTypes.Email) ?? throw new InvalidOperationException("No email");
+            var email = CurrentUser.Email ?? throw new InvalidOperationException("No email");
             await _teams.AcceptInviteAsync(token, email);
             return Ok();
         }

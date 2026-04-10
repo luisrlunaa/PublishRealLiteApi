@@ -8,6 +8,7 @@ using PublishRealLiteApi.Application.Services.Interfaces;
 using PublishRealLiteApi.Infrastructure.Data;
 using PublishRealLiteApi.Infrastructure.Identity;
 using PublishRealLiteApi.Infrastructure.Persistence.Repositories;
+using PublishRealLiteApi.Infrastructure.Repositories;
 
 namespace PublishRealLiteApi.Infrastructure;
 
@@ -32,6 +33,9 @@ public static class DependencyInjection
         services.AddScoped<IStatsService, StatsService>();
         services.AddScoped<ITeamService, TeamService>();
         services.AddScoped<IVideoService, VideoService>();
+        services.AddScoped<IArtistProfileService, ArtistProfileService>();
+        services.AddScoped<IArtistVideoService, ArtistVideoService>();
+        services.AddScoped<IAuthService, AuthService>();
 
         // Repositories
         services.AddScoped<IReleaseRepository, ReleaseRepository>();
@@ -39,6 +43,8 @@ public static class DependencyInjection
         services.AddScoped<ITeamRepository, TeamRepository>();
         services.AddScoped<ITeamInviteRepository, TeamInviteRepository>();
         services.AddScoped<IVideoRepository, VideoRepository>();
+        services.AddScoped<IArtistProfileRepository, ArtistProfileRepository>();
+        services.AddScoped<IArtistVideoRepository, ArtistVideoRepository>();
 
         // Health checks
         services.AddHealthChecks()
