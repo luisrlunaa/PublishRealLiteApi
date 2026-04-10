@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { apiClient } from "@/lib/api/client";
 import type { StreamStatSummary } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import {
   Globe,
   Music,
   Calendar,
+  Upload,
 } from "lucide-react";
 import {
   Select,
@@ -115,19 +117,27 @@ export default function StatsPage() {
             Track your streaming performance
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <Select value={range} onValueChange={setRange}>
-            <SelectTrigger className="w-[140px] bg-input">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="90">Last 90 days</SelectItem>
-              <SelectItem value="365">Last year</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
+            <Select value={range} onValueChange={setRange}>
+              <SelectTrigger className="w-[140px] bg-input">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Last 7 days</SelectItem>
+                <SelectItem value="30">Last 30 days</SelectItem>
+                <SelectItem value="90">Last 90 days</SelectItem>
+                <SelectItem value="365">Last year</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <Link href="/dashboard/stats/import">
+            <Button variant="outline">
+              <Upload className="mr-2 h-4 w-4" />
+              Import Stats
+            </Button>
+          </Link>
         </div>
       </div>
 
