@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { apiClient } from "@/lib/api/client";
 import type { StreamStatSummary } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
@@ -53,6 +52,8 @@ export default function StatsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [range, setRange] = useState("30");
+  const [showUpload, setShowUpload] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -71,6 +72,41 @@ export default function StatsPage() {
 
     fetchStats();
   }, [range]);
+
+  const handleFileUpload = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:44317'}/api/stream-stats/import`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('publishreal_token')}`,
+          },
+          body: formData,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to upload statistics file');
+      }
+
+      // Refresh stats after upload
+      const updatedStats = await apiClient.getStatsSummary(parseInt(range));
+      setStats(updatedStats);
+      setShowUpload(false);
+
+      // Toast notification would go here
+    } catch (err) {
+      console.error('Upload error:', err);
+      // Error notification would go here
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   if (error) {
     return (
@@ -132,14 +168,24 @@ export default function StatsPage() {
               </SelectContent>
             </Select>
           </div>
-          <Link href="/dashboard/stats/import">
-            <Button variant="outline">
-              <Upload className="mr-2 h-4 w-4" />
-              Import Stats
-            </Button>
-          </Link>
+          <Button 
+            variant="outline"
+            onClick={() => setShowUpload(!showUpload)}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Import Stats
+          </Button>
         </div>
       </div>
+
+      {/* Upload Section */}
+      {showUpload && (
+        <StatsUploadCard 
+          onUpload={handleFileUpload}
+          isUploading={isUploading}
+          onCancel={() => setShowUpload(false)}
+        />
+      )}
 
       {/* Stats Grid */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -404,4 +450,116 @@ function formatNumber(num: number): string {
     return (num / 1000).toFixed(1) + "K";
   }
   return num.toString();
+}
+
+// Stats Upload Card Component
+interface StatsUploadCardProps {
+  onUpload: (file: File) => Promise<void>;
+  isUploading: boolean;
+  onCancel: () => void;
+}
+
+function StatsUploadCard({ onUpload, isUploading, onCancel }: StatsUploadCardProps) {
+  const [dragActive, setDragActive] = useState(false);
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      onUpload(files[0]);
+    }
+  };
+
+  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      onUpload(files[0]);
+    }
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-foreground">
+          Import Statistics
+        </h3>
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={onCancel}
+          disabled={isUploading}
+        >
+          ✕
+        </Button>
+      </div>
+
+      <div
+        onDragEnter={handleDrag}
+        onDragLeave={handleDrag}
+        onDragOver={handleDrag}
+        onDrop={handleDrop}
+        className={`rounded-lg border-2 border-dashed p-8 text-center transition-colors ${
+          dragActive
+            ? "border-primary bg-primary/5"
+            : "border-border bg-secondary/20"
+        }`}
+      >
+        <div className="flex flex-col items-center">
+          <Upload className="h-8 w-8 text-muted-foreground mb-3" />
+          <p className="font-medium text-foreground mb-1">
+            {isUploading ? "Uploading..." : "Drop your CSV or Excel file here"}
+          </p>
+          <p className="text-sm text-muted-foreground mb-4">
+            Supported formats: CSV, XLSX
+          </p>
+
+          {!isUploading && (
+            <div>
+              <Button 
+                variant="outline" 
+                onClick={() => document.getElementById('file-upload')?.click()}
+              >
+                Choose File
+              </Button>
+              <input
+                id="file-upload"
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={handleFileInput}
+                className="hidden"
+              />
+            </div>
+          )}
+
+          {isUploading && (
+            <div className="flex items-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <span className="text-sm text-muted-foreground">
+                Processing file...
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-4 rounded-lg bg-secondary/50 p-4">
+        <p className="text-xs text-muted-foreground">
+          <strong>File Format:</strong> Your file should contain the following columns: Artist Name, Streams, Platform, Country, Date
+        </p>
+      </div>
+    </div>
+  );
 }

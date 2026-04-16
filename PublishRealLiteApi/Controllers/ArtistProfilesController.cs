@@ -31,6 +31,30 @@ namespace PublishRealLiteApi.Controllers
         }
 
         [Authorize]
+        [HttpGet("me/admin")]
+        public async Task<IActionResult> GetMyAdminProfile()
+        {
+            var userId = CurrentUser.UserId;
+            if (userId == null) return Unauthorized();
+
+            var profile = await _service.GetAdminProfileWithSubProfilesAsync(userId);
+            if (profile == null) return NotFound("No admin profile found");
+
+            return Ok(profile);
+        }
+
+        [Authorize]
+        [HttpGet("me/subprofiles")]
+        public async Task<IActionResult> GetMySubProfiles()
+        {
+            var userId = CurrentUser.UserId;
+            if (userId == null) return Unauthorized();
+
+            var profiles = await _service.GetSubProfilesAsync(userId);
+            return Ok(profiles);
+        }
+
+        [Authorize]
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateArtistDto dto)
         {
@@ -39,6 +63,20 @@ namespace PublishRealLiteApi.Controllers
             var result = await _service.CreateAsync(userId, dto);
             if (result == null) return BadRequest("The user already has a profile.");
             return CreatedAtAction(nameof(Get), new { id = result.Id }, result);
+        }
+
+        [Authorize]
+        [HttpPost("with-admin-code")]
+        public async Task<IActionResult> CreateWithAdminCode([FromBody] CreateArtistWithAdminCodeDto dto)
+        {
+            var userId = CurrentUser.UserId;
+            if (userId == null) return Unauthorized();
+
+            var profile = await _service.CreateWithAdminCodeAsync(userId, dto);
+            if (profile == null)
+                return BadRequest("Invalid admin code or profile already exists");
+
+            return CreatedAtAction(nameof(Get), new { id = profile.Id }, profile);
         }
 
         [Authorize]

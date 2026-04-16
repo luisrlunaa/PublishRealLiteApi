@@ -34,6 +34,13 @@ namespace PublishRealLiteApi.Controllers
             }
         }
 
+        [HttpGet("profile/{profileId:int}")]
+        public async Task<IActionResult> GetByProfile(int profileId)
+        {
+            var videos = await _service.GetByArtistProfileIdAsync(profileId);
+            return Ok(videos);
+        }
+
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] CreateArtistVideoDto dto)
         {

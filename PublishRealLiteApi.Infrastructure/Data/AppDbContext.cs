@@ -115,6 +115,7 @@ namespace PublishRealLiteApi.Infrastructure.Data
             {
                 tm.HasKey(x => x.Id);
                 tm.Property(x => x.Email).HasMaxLength(256).IsRequired();
+                tm.Property(t => t.SharePercent).HasColumnType("decimal(18,2)");
             });
 
             builder.Entity<TeamInvite>(ti =>

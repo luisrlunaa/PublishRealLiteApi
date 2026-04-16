@@ -5,7 +5,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { apiClient } from "@/lib/api/client";
-import type { ArtistVideo } from "@/lib/api/types";
+import { useAuth } from "@/lib/auth/auth-context";
+import type { ArtistVideo, AdminProfileResponseDto } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +39,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -57,6 +65,7 @@ const videoSchema = z.object({
 type VideoFormData = z.infer<typeof videoSchema>;
 
 export default function VideosPage() {
+  const { profile } = useAuth();
   const [videos, setVideos] = useState<ArtistVideo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -64,6 +73,9 @@ export default function VideosPage() {
   const [editingVideo, setEditingVideo] = useState<ArtistVideo | null>(null);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [adminProfiles, setAdminProfiles] = useState<AdminProfileResponseDto | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState<number | null>(null);
+  const [isAdminLoading, setIsAdminLoading] = useState(false);
 
   const {
     register,
@@ -75,12 +87,41 @@ export default function VideosPage() {
   });
 
   useEffect(() => {
-    fetchVideos();
-  }, []);
+    // If admin, load admin profiles and select first one
+    if (profile?.isAdminProfile) {
+      fetchAdminProfiles();
+    } else {
+      fetchVideos();
+    }
+  }, [profile]);
 
-  const fetchVideos = async () => {
+  const fetchAdminProfiles = async () => {
+    setIsAdminLoading(true);
     try {
-      const data = await apiClient.getMyVideos();
+      const data = await apiClient.getMyAdminProfile();
+      setAdminProfiles(data);
+      if (data.subProfiles.length > 0) {
+        setSelectedProfileId(data.subProfiles[0].id);
+        await fetchVideos(data.subProfiles[0].id);
+      }
+    } catch (err) {
+      setError(
+        err instanceof Error ? err : new Error("Failed to load admin profiles")
+      );
+    } finally {
+      setIsAdminLoading(false);
+    }
+  };
+
+  const fetchVideos = async (profileId?: number) => {
+    setIsLoading(true);
+    try {
+      let data: ArtistVideo[];
+      if (profileId) {
+        data = await apiClient.getVideosByProfile(profileId);
+      } else {
+        data = await apiClient.getMyVideos();
+      }
       setVideos(data);
     } catch (err) {
       setError(
@@ -89,6 +130,12 @@ export default function VideosPage() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleProfileChange = (profileId: string) => {
+    const id = parseInt(profileId);
+    setSelectedProfileId(id);
+    fetchVideos(id);
   };
 
   const openCreateDialog = () => {
@@ -179,6 +226,36 @@ export default function VideosPage() {
           Add Video
         </Button>
       </div>
+
+      {/* Profile Selector for Admin */}
+      {profile?.isAdminProfile && (
+        <div className="space-y-3">
+          <Label htmlFor="profile-select">Select Artist Profile</Label>
+          {isAdminLoading ? (
+            <LoadingSpinner />
+          ) : adminProfiles && adminProfiles.subProfiles.length > 0 ? (
+            <Select
+              value={selectedProfileId?.toString() || ""}
+              onValueChange={handleProfileChange}
+            >
+              <SelectTrigger id="profile-select" className="w-full sm:w-64">
+                <SelectValue placeholder="Choose a profile" />
+              </SelectTrigger>
+              <SelectContent>
+                {adminProfiles.subProfiles.map((p) => (
+                  <SelectItem key={p.id} value={p.id.toString()}>
+                    {p.artistName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              No artist profiles found. Create one to manage videos.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Videos Grid */}
       {isLoading ? (

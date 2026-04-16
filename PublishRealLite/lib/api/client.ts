@@ -7,6 +7,8 @@ import type {
   ArtistProfileDto,
   CreateArtistDto,
   UpdateArtistDto,
+  CreateArtistWithAdminCodeDto,
+  AdminProfileResponseDto,
   ReleaseDto,
   CreateReleaseDto,
   UpdateReleaseDto,
@@ -140,15 +142,32 @@ class ApiClient {
     return this.request("/ArtistProfiles");
   }
 
-  async getArtistProfile(id: number): Promise<ArtistProfileDto> {
-    return this.request(`/ArtistProfiles/${id}`);
-  }
+async getArtistProfile(id: number): Promise<ArtistProfileDto> {
+    return this.request(`/ArtistProfiles/${id}`); 
+}
 
   async createArtistProfile(dto: CreateArtistDto): Promise<ArtistProfileDto> {
     return this.request("/ArtistProfiles", {
       method: "POST",
       body: JSON.stringify(dto),
     });
+  }
+
+  async createArtistProfileWithAdminCode(
+    dto: CreateArtistWithAdminCodeDto
+  ): Promise<ArtistProfileDto> {
+    return this.request("/ArtistProfiles/with-admin-code", {
+      method: "POST",
+      body: JSON.stringify(dto),
+    });
+  }
+
+  async getMyAdminProfile(): Promise<AdminProfileResponseDto> {
+    return this.request("/ArtistProfiles/me/admin");
+  }
+
+  async getMySubProfiles(): Promise<ArtistProfileDto[]> {
+    return this.request("/ArtistProfiles/me/subprofiles");
   }
 
   async updateArtistProfile(id: number, dto: UpdateArtistDto): Promise<void> {
@@ -221,6 +240,10 @@ class ApiClient {
   // Videos
   async getMyVideos(): Promise<ArtistVideo[]> {
     return this.request("/Videos/mine");
+  }
+
+  async getVideosByProfile(profileId: number): Promise<ArtistVideo[]> {
+    return this.request(`/Videos/profile/${profileId}`);
   }
 
   async createVideo(dto: ArtistVideoDto): Promise<ArtistVideo> {

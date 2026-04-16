@@ -17,7 +17,18 @@ namespace PublishRealLiteApi.Infrastructure.Repositories
             await _db.ArtistProfiles.FindAsync(id);
 
         public async Task<ArtistProfile?> GetByUserIdAsync(string userId) =>
-            await _db.ArtistProfiles.FirstOrDefaultAsync(x => x.UserId == userId);
+            await _db.ArtistProfiles.FirstOrDefaultAsync(x => x.UserId == userId && !x.IsDeleted);
+
+        public async Task<ArtistProfile?> GetAdminProfileByUserIdAsync(string userId) =>
+            await _db.ArtistProfiles.FirstOrDefaultAsync(x => x.UserId == userId && x.IsAdminProfile && !x.IsDeleted);
+
+        public async Task<List<ArtistProfile>> GetSubProfilesByAdminAsync(string adminUserId) =>
+            await _db.ArtistProfiles
+                .Where(x => x.AdminUserId == adminUserId && !x.IsDeleted)
+                .ToListAsync();
+
+        public async Task<bool> AdminExistsByUserIdAsync(string userId) =>
+            await _db.ArtistProfiles.AnyAsync(x => x.UserId == userId && x.IsAdminProfile && !x.IsDeleted);
 
         public async Task AddAsync(ArtistProfile profile)
         {
@@ -38,6 +49,6 @@ namespace PublishRealLiteApi.Infrastructure.Repositories
         }
 
         public async Task<bool> ExistsForUserAsync(string userId) =>
-            await _db.ArtistProfiles.AnyAsync(x => x.UserId == userId);
+            await _db.ArtistProfiles.AnyAsync(x => x.UserId == userId && !x.IsDeleted);
     }
 }

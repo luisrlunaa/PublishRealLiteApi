@@ -39,6 +39,7 @@ export interface ArtistProfileDto {
   bio: string | null;
   profileImageUrl: string | null;
   socialLinksJson: string | null;
+  isAdminProfile?: boolean;
 }
 
 export interface CreateArtistDto {
@@ -51,6 +52,32 @@ export interface UpdateArtistDto {
   artistName: string;
   bio?: string;
   socialLinksJson?: string;
+}
+
+export interface CreateArtistWithAdminCodeDto {
+  artistName: string;
+  bio?: string;
+  socialLinksJson?: string;
+  adminUserId?: string;
+}
+
+export interface AdminProfileResponseDto {
+  id: number;
+  userId: string;
+  artistName: string;
+  bio: string | null;
+  profileImageUrl: string | null;
+  socialLinksJson: string | null;
+  userIdForInvite: string;
+  subProfiles: ArtistProfileDto[];
+}
+
+export interface ArtistProfileWithSubProfilesDto {
+  id: number;
+  artistName: string;
+  bio: string | null;
+  profileImageUrl: string | null;
+  subProfiles: ArtistProfileDto[];
 }
 
 // Release

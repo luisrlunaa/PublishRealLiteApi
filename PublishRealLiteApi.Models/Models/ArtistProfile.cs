@@ -17,6 +17,10 @@ namespace PublishRealLiteApi.Models
         public string? ProfileImageUrl { get; set; }
         public string? SocialLinksJson { get; set; } // JSON string for flexible links 
 
+        // Admin relationship
+        public string? AdminUserId { get; set; } // FK to admin profile's UserId (NULL if is admin)
+        public bool IsAdminProfile { get; set; } = true; // Indicates if this is an admin profile
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
         // Soft delete + audit
@@ -26,5 +30,6 @@ namespace PublishRealLiteApi.Models
         public string? UpdatedBy { get; set; }
         public ICollection<Release> Releases { get; set; } = new List<Release>();
         public ICollection<ArtistVideo> Videos { get; set; } = new List<ArtistVideo>();
+        public ICollection<ArtistProfile> SubProfiles { get; set; } = new List<ArtistProfile>(); // Sub-profiles for admins
     }
 }

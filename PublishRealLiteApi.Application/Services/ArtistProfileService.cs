@@ -13,13 +13,13 @@ namespace PublishRealLiteApi.Application.Services
         public async Task<List<ArtistProfileDto>> GetAllAsync()
         {
             var list = await _repo.GetAllAsync();
-            return list.ConvertAll(p => new ArtistProfileDto(p.Id, p.ArtistName, p.Bio, p.ProfileImageUrl, p.SocialLinksJson));
+            return list.ConvertAll(p => new ArtistProfileDto(p.Id, p.ArtistName, p.Bio, p.ProfileImageUrl, p.SocialLinksJson, p.IsAdminProfile));
         }
 
         public async Task<ArtistProfileDto?> GetByIdAsync(int id)
         {
             var p = await _repo.GetByIdAsync(id);
-            return p == null ? null : new ArtistProfileDto(p.Id, p.ArtistName, p.Bio, p.ProfileImageUrl, p.SocialLinksJson);
+            return p == null ? null : new ArtistProfileDto(p.Id, p.ArtistName, p.Bio, p.ProfileImageUrl, p.SocialLinksJson, p.IsAdminProfile);
         }
 
         public async Task<ArtistProfileDto?> CreateAsync(string userId, CreateArtistDto dto)
@@ -30,10 +30,61 @@ namespace PublishRealLiteApi.Application.Services
                 UserId = userId,
                 ArtistName = dto.ArtistName,
                 Bio = dto.Bio,
-                SocialLinksJson = dto.SocialLinksJson
+                SocialLinksJson = dto.SocialLinksJson,
+                IsAdminProfile = true
             };
             await _repo.AddAsync(profile);
-            return new ArtistProfileDto(profile.Id, profile.ArtistName, profile.Bio, profile.ProfileImageUrl, profile.SocialLinksJson);
+            return new ArtistProfileDto(profile.Id, profile.ArtistName, profile.Bio, profile.ProfileImageUrl, profile.SocialLinksJson, profile.IsAdminProfile);
+        }
+
+        public async Task<ArtistProfileDto?> CreateWithAdminCodeAsync(string userId, CreateArtistWithAdminCodeDto dto)
+        {
+            if (await _repo.ExistsForUserAsync(userId)) return null;
+
+            // Validate that the adminUserId exists and is an admin
+            if (!string.IsNullOrEmpty(dto.AdminUserId))
+            {
+                var adminExists = await _repo.AdminExistsByUserIdAsync(dto.AdminUserId);
+                if (!adminExists) return null;
+            }
+
+            var profile = new ArtistProfile
+            {
+                UserId = userId,
+                AdminUserId = dto.AdminUserId,
+                ArtistName = dto.ArtistName,
+                Bio = dto.Bio,
+                SocialLinksJson = dto.SocialLinksJson,
+                IsAdminProfile = string.IsNullOrEmpty(dto.AdminUserId)
+            };
+
+            await _repo.AddAsync(profile);
+            return new ArtistProfileDto(profile.Id, profile.ArtistName, profile.Bio, profile.ProfileImageUrl, profile.SocialLinksJson, profile.IsAdminProfile);
+        }
+
+        public async Task<AdminProfileResponseDto?> GetAdminProfileWithSubProfilesAsync(string userId)
+        {
+            var profile = await _repo.GetAdminProfileByUserIdAsync(userId);
+            if (profile == null) return null;
+
+            var subProfiles = await _repo.GetSubProfilesByAdminAsync(userId);
+
+            return new AdminProfileResponseDto(
+                profile.Id,
+                profile.UserId,
+                profile.ArtistName,
+                profile.Bio,
+                profile.ProfileImageUrl,
+                profile.SocialLinksJson,
+                profile.UserId,
+                subProfiles.ConvertAll(p => new ArtistProfileDto(p.Id, p.ArtistName, p.Bio, p.ProfileImageUrl, p.SocialLinksJson, p.IsAdminProfile))
+            );
+        }
+
+        public async Task<List<ArtistProfileDto>> GetSubProfilesAsync(string adminUserId)
+        {
+            var profiles = await _repo.GetSubProfilesByAdminAsync(adminUserId);
+            return profiles.ConvertAll(p => new ArtistProfileDto(p.Id, p.ArtistName, p.Bio, p.ProfileImageUrl, p.SocialLinksJson, p.IsAdminProfile));
         }
 
         public async Task<bool> UpdateAsync(int id, string userId, bool isAdmin, UpdateArtistDto dto)

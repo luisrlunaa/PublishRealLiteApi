@@ -4,8 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth/auth-context";
 import { apiClient } from "@/lib/api/client";
-import type { ReleaseDto, StreamStatSummary } from "@/lib/api/types";
+import type { ReleaseDto, StreamStatSummary, AdminProfileResponseDto, ArtistProfileDto } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   StatCardSkeleton,
   CardSkeleton,
@@ -20,6 +22,10 @@ import {
   Music,
   ArrowRight,
   User,
+  Users,
+  Copy,
+  Check,
+  Loader2,
 } from "lucide-react";
 
 export default function DashboardPage() {
@@ -28,6 +34,11 @@ export default function DashboardPage() {
   const [stats, setStats] = useState<StreamStatSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [adminProfile, setAdminProfile] = useState<AdminProfileResponseDto | null>(null);
+  const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [adminCode, setAdminCode] = useState("");
+  const [isSubmittingCode, setIsSubmittingCode] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,6 +58,61 @@ export default function DashboardPage() {
 
     fetchData();
   }, []);
+
+  // Load admin profile if user is admin
+  useEffect(() => {
+    const loadAdminProfile = async () => {
+      if (profile?.isAdminProfile) {
+        setIsLoadingAdmin(true);
+        try {
+          const data = await apiClient.getMyAdminProfile();
+          setAdminProfile(data);
+        } catch (err) {
+          console.warn("Error loading admin profile:", err);
+        } finally {
+          setIsLoadingAdmin(false);
+        }
+      } else {
+        setAdminProfile(null);
+      }
+    };
+
+    loadAdminProfile();
+  }, [profile?.isAdminProfile]);
+
+  const handleCopyCode = () => {
+    if (adminProfile?.userIdForInvite) {
+      navigator.clipboard.writeText(adminProfile.userIdForInvite);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 2000);
+    }
+  };
+
+  const handleSubmitAdminCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmittingCode(true);
+
+    try {
+      const newProfile = await apiClient.createArtistProfileWithAdminCode({
+        artistName: `Team Member ${Date.now()}`,
+        bio: "Added via invitation",
+        adminUserId: adminCode,
+      });
+
+      // Reload admin profile to show new subordinate
+      if (profile?.isAdminProfile) {
+        const updated = await apiClient.getMyAdminProfile();
+        setAdminProfile(updated);
+      }
+
+      setAdminCode("");
+      alert("Team member profile created successfully!");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to add team member");
+    } finally {
+      setIsSubmittingCode(false);
+    }
+  };
 
   if (error) {
     return (
@@ -97,6 +163,93 @@ export default function DashboardPage() {
               </Link>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Admin Team Management Section */}
+      {profile?.isAdminProfile && (
+        <div className="space-y-6 rounded-xl border border-border bg-card p-6">
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">
+              Team Management
+            </h2>
+          </div>
+
+          {/* Invitation Code */}
+          <div className="space-y-3">
+            <div>
+              <Label className="text-sm font-medium text-muted-foreground">
+                Share Your Invitation Code
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1">
+                Team members can use this code to join your organization
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="flex-1 rounded-lg bg-secondary p-3 font-mono text-sm break-all">
+                {isLoadingAdmin ? (
+                  <Loader2 className="inline h-4 w-4 animate-spin" />
+                ) : (
+                  adminProfile?.userIdForInvite || "Loading..."
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleCopyCode}
+                disabled={isLoadingAdmin}
+              >
+                {copiedCode ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {/* Team Members List */}
+          {adminProfile && adminProfile.subProfiles.length > 0 && (
+            <div className="border-t border-border pt-6 space-y-3">
+              <p className="text-sm font-medium text-foreground">
+                Team Members ({adminProfile.subProfiles.length})
+              </p>
+              <div className="space-y-2">
+                {adminProfile.subProfiles.map((member) => (
+                  <div
+                    key={member.id}
+                    className="flex items-center justify-between rounded-lg border border-border/50 bg-secondary p-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                        <User className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {member.artistName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          ID: {member.id}
+                        </p>
+                      </div>
+                    </div>
+                    <Link href={`/dashboard/profile/id?id=${member.id}`}>
+                      <Button variant="ghost" size="sm">
+                        View
+                      </Button>
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

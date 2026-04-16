@@ -18,6 +18,7 @@ const registerSchema = z
     email: z.string().email("Please enter a valid email address"),
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string().min(6, "Please confirm your password"),
+    adminCode: z.string().optional().or(z.literal("")),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -33,6 +34,7 @@ export default function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [useAdminCode, setUseAdminCode] = useState(false);
 
   const {
     register,
@@ -47,7 +49,30 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      await registerUser({ email: data.email, password: data.password });
+      // If admin code is provided, create profile with admin code after registration
+      if (data.adminCode?.trim()) {
+        // First register the user
+        const registerResponse = await registerUser({ email: data.email, password: data.password });
+
+        // Then create profile with admin code
+        try {
+          const profilePath = `/api/artist-profiles/with-admin-code`;
+          await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://localhost:44317'}${profilePath}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${localStorage.getItem('publishreal_token')}`,
+            },
+            body: JSON.stringify({ adminUserId: data.adminCode.trim() }),
+          });
+        } catch (profileErr) {
+          console.warn("Profile creation with admin code succeeded but post-processing failed:", profileErr);
+        }
+      } else {
+        // Standard registration without admin code
+        await registerUser({ email: data.email, password: data.password });
+      }
+
       router.push("/dashboard");
     } catch (err) {
       if (err && typeof err === "object" && "message" in err) {
@@ -178,6 +203,37 @@ export default function RegisterPage() {
                   </p>
                 )}
               </div>
+
+              {/* Admin Code Section */}
+              <div className="rounded-lg border border-border/50 bg-secondary/30 p-3">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="useAdminCode"
+                    checked={useAdminCode}
+                    onChange={(e) => setUseAdminCode(e.target.checked)}
+                    className="h-4 w-4 rounded border-border"
+                  />
+                  <Label htmlFor="useAdminCode" className="text-sm font-medium cursor-pointer">
+                    I'm joining as a team member under an admin
+                  </Label>
+                </div>
+              </div>
+
+              {useAdminCode && (
+                <div className="space-y-2">
+                  <Label htmlFor="adminCode">Admin Invitation Code</Label>
+                  <Input
+                    id="adminCode"
+                    placeholder="Paste the admin's invitation code here"
+                    {...register("adminCode")}
+                    className="h-12 bg-input font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Ask your admin for their user ID to get started
+                  </p>
+                </div>
+              )}
 
               <Button
                 type="submit"

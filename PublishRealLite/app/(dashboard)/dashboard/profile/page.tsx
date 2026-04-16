@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useAuth } from "@/lib/auth/auth-context";
 import { apiClient } from "@/lib/api/client";
-import type { SocialLinks } from "@/lib/api/types";
+import type { SocialLinks, AdminProfileResponseDto, ArtistProfileDto } from "@/lib/api/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +23,10 @@ import {
   Youtube,
   Globe,
   Music,
+  Copy,
+  Users,
+  Check,
+  ChevronDown,
 } from "lucide-react";
 
 const profileSchema = z.object({
@@ -43,6 +47,11 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [adminProfile, setAdminProfile] = useState<AdminProfileResponseDto | null>(null);
+  const [isLoadingAdmin, setIsLoadingAdmin] = useState(false);
+  const [copiedCode, setCopiedCode] = useState(false);
+  const [selectedSubProfileId, setSelectedSubProfileId] = useState<number | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   const {
     register,
@@ -69,6 +78,27 @@ export default function ProfilePage() {
     loadProfile();
   }, [refreshProfile]);
 
+  // Load admin profile if user is admin
+  useEffect(() => {
+    const loadAdminProfile = async () => {
+      if (profile?.isAdminProfile) {
+        setIsLoadingAdmin(true);
+        try {
+          const data = await apiClient.getMyAdminProfile();
+          setAdminProfile(data);
+        } catch (err) {
+          console.warn("Error loading admin profile:", err);
+        } finally {
+          setIsLoadingAdmin(false);
+        }
+      } else {
+        setAdminProfile(null);
+      }
+    };
+
+    loadAdminProfile();
+  }, [profile?.isAdminProfile]);
+
   useEffect(() => {
     if (profile) {
       const socialLinks: SocialLinks = profile.socialLinksJson
@@ -88,43 +118,74 @@ export default function ProfilePage() {
     }
   }, [profile, reset]);
 
-  const onSubmit = async (data: ProfileFormData) => {
-    setIsSaving(true);
+const onSubmit = async (data: ProfileFormData) => {
+  setIsSaving(true);
 
-    try {
-      const socialLinks: SocialLinks = {
-        spotify: data.spotify || undefined,
-        appleMusic: data.appleMusic || undefined,
-        instagram: data.instagram || undefined,
-        twitter: data.twitter || undefined,
-        youtube: data.youtube || undefined,
-        website: data.website || undefined,
-      };
+  try {
+    const socialLinks: SocialLinks = {
+      spotify: data.spotify || undefined,
+      appleMusic: data.appleMusic || undefined,
+      instagram: data.instagram || undefined,
+      twitter: data.twitter || undefined,
+      youtube: data.youtube || undefined,
+      website: data.website || undefined,
+    };
 
-      const payload = {
-        artistName: data.artistName,
-        bio: data.bio,
-        socialLinksJson: JSON.stringify(socialLinks),
-      };
+    const payload = {
+      artistName: data.artistName,
+      bio: data.bio || undefined,
+      socialLinksJson: JSON.stringify(socialLinks),
+    };
 
-      if (profile) {
-        await apiClient.updateArtistProfile(profile.id, payload);
-        setProfile({ ...profile, ...payload });
-        toast.success("Profile updated successfully");
-      } else {
-        const newProfile = await apiClient.createArtistProfile(payload);
-        setProfile(newProfile);
-        toast.success("Profile created successfully");
-      }
-    } catch (err) {
-      const message =
-        err && typeof err === "object" && "message" in err
-          ? (err as { message: string }).message
-          : "Failed to save profile";
-      toast.error(message);
-    } finally {
-      setIsSaving(false);
+    if (profile) {
+      await apiClient.updateArtistProfile(profile.id, payload);
+      setProfile({ 
+        ...profile, 
+        ...payload,
+        bio: payload.bio || null,                    // ← CONVERT undefined to null
+        socialLinksJson: payload.socialLinksJson || null,  // ← CONVERT undefined to null
+        isAdminProfile: profile.isAdminProfile ?? false 
+      });
+      toast.success("Profile updated successfully");
+    } else {
+      const newProfile = await apiClient.createArtistProfile(payload);
+      setProfile({ 
+        ...newProfile, 
+        bio: newProfile.bio || null,                 // ← CONVERT undefined to null
+        socialLinksJson: newProfile.socialLinksJson || null,  // ← CONVERT undefined to null
+        isAdminProfile: newProfile.isAdminProfile ?? false 
+      });
+      toast.success("Profile created successfully");
     }
+  } catch (err) {
+    const message =
+      err && typeof err === "object" && "message" in err
+        ? (err as { message: string }).message
+        : "Failed to save profile";
+    toast.error(message);
+  } finally {
+    setIsSaving(false);
+  }
+};
+
+  const handleCopyCode = () => {
+    if (adminProfile?.userIdForInvite) {
+      navigator.clipboard.writeText(adminProfile.userIdForInvite);
+      setCopiedCode(true);
+      toast.success("Invitation code copied to clipboard");
+      setTimeout(() => setCopiedCode(false), 2000);
+    }
+  };
+
+  const handleSelectProfile = (subProfileId: number) => {
+    setSelectedSubProfileId(subProfileId);
+    setIsDropdownOpen(false);
+  };
+
+  const getSelectedProfileName = () => {
+    if (!selectedSubProfileId || !adminProfile) return "Select a profile";
+    const selected = adminProfile.subProfiles.find(p => p.id === selectedSubProfileId);
+    return selected?.artistName || "Select a profile";
   };
 
   if (isLoading) {
@@ -192,7 +253,7 @@ export default function ProfilePage() {
           </h2>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="artistName">Artist Name *</Label>
+              <Label htmlFor="artistName">Artist Name</Label>
               <Input
                 id="artistName"
                 placeholder="Your artist name"
@@ -205,25 +266,33 @@ export default function ProfilePage() {
                 </p>
               )}
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="bio">Biography</Label>
+              <Label htmlFor="bio">Bio</Label>
               <Textarea
                 id="bio"
-                placeholder="Tell your story..."
+                placeholder="Tell us about yourself..."
                 {...register("bio")}
                 className="min-h-[120px] bg-input"
               />
+              {errors.bio && (
+                <p className="text-sm text-destructive">{errors.bio.message}</p>
+              )}
             </div>
           </div>
         </div>
 
         {/* Social Links */}
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="mb-4 text-lg font-semibold text-foreground">
-            Social Links
-          </h2>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="mb-4 flex items-center gap-2">
+            <Music className="h-5 w-5 text-primary" />
+            <h2 className="text-lg font-semibold text-foreground">
+              Social & Music Links
+            </h2>
+          </div>
+          <p className="mb-4 text-sm text-muted-foreground">
+            Add links to your music platforms and social media
+          </p>
+          <div className="grid gap-4 md:grid-cols-2">
             <SocialLinkInput
               id="spotify"
               label="Spotify"
@@ -292,6 +361,173 @@ export default function ProfilePage() {
           </Button>
         </div>
       </form>
+
+      {/* Admin Profile Management Section - Only for Admins */}
+      {profile?.isAdminProfile && (
+        <div className="space-y-6 border-t border-border pt-8">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Team Management</h2>
+            <p className="mt-1 text-muted-foreground">
+              Manage your team members and share invitations
+            </p>
+          </div>
+
+          {/* Profile Selector Dropdown */}
+          {adminProfile && adminProfile.subProfiles.length > 0 && (
+            <div className="rounded-xl border border-border bg-card p-6">
+              <Label className="mb-3 block text-sm font-semibold">Switch Profile</Label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="w-full flex items-center justify-between px-4 py-3 rounded-lg bg-input border border-border hover:bg-secondary/50 transition-colors text-foreground text-left"
+                >
+                  <span>{getSelectedProfileName()}</span>
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {isDropdownOpen && (
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-lg shadow-lg z-50">
+                    {adminProfile.subProfiles.map((subProfile) => (
+                      <button
+                        key={subProfile.id}
+                        type="button"
+                        onClick={() => handleSelectProfile(subProfile.id)}
+                        className={`w-full text-left px-4 py-3 hover:bg-secondary/50 transition-colors first:rounded-t-lg last:rounded-b-lg ${
+                          selectedSubProfileId === subProfile.id ? 'bg-primary/10 text-primary font-semibold' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10">
+                            <User className="h-3 w-3 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium">{subProfile.artistName}</p>
+                            <p className="text-xs text-muted-foreground">ID: {subProfile.id}</p>
+                          </div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {selectedSubProfileId && (
+                <div className="mt-4 p-3 rounded-lg bg-secondary/30 border border-border">
+                  <p className="text-sm text-muted-foreground">
+                    Selected: <span className="font-semibold text-foreground">{getSelectedProfileName()}</span>
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Invitation Code Card */}
+          <div className="rounded-xl border border-border bg-card p-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Users className="h-5 w-5 text-primary" />
+              <h3 className="text-lg font-semibold text-foreground">
+                Invitation Code
+              </h3>
+            </div>
+
+            <p className="text-sm text-muted-foreground mb-4">
+              Share this code with team members so they can join your organization during registration.
+            </p>
+
+            {isLoadingAdmin ? (
+              <LoadingSpinner />
+            ) : (
+              <div className="rounded-lg bg-secondary p-4">
+                <Label className="text-xs font-semibold uppercase text-muted-foreground mb-2 block">
+                  Your Invitation Code
+                </Label>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 rounded bg-background px-3 py-2 font-mono text-sm break-all">
+                    {adminProfile?.userIdForInvite || "Loading..."}
+                  </code>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCopyCode}
+                    disabled={isLoadingAdmin}
+                  >
+                    {copiedCode ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Team Members Table */}
+          {adminProfile && adminProfile.subProfiles.length > 0 ? (
+            <div className="rounded-xl border border-border bg-card p-6">
+              <h3 className="mb-4 text-lg font-semibold text-foreground">
+                Team Members ({adminProfile.subProfiles.length})
+              </h3>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="px-4 py-3 text-left font-semibold text-foreground">
+                        Artist Name
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold text-foreground">
+                        Profile ID
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold text-foreground">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adminProfile.subProfiles.map((subProfile) => (
+                      <tr
+                        key={subProfile.id}
+                        className="border-b border-border hover:bg-secondary/30 transition-colors"
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
+                              <User className="h-4 w-4 text-primary" />
+                            </div>
+                            <span className="font-medium text-foreground">
+                              {subProfile.artistName}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          <code className="rounded bg-secondary px-2 py-1 text-xs font-mono">
+                            {subProfile.id}
+                          </code>
+                        </td>
+                        <td className="px-4 py-3">
+                          <Button variant="ghost" size="sm">
+                            Manage
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border bg-card p-6 text-center">
+              <Users className="mx-auto h-12 w-12 text-muted-foreground/50 mb-2" />
+              <p className="text-sm text-muted-foreground">
+                No team members yet. Share your invitation code to add team members.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
