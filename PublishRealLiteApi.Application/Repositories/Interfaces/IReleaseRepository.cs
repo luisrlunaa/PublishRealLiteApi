@@ -4,6 +4,7 @@ namespace PublishRealLiteApi.Application.Repositories.Interfaces
 {
     public interface IReleaseRepository
     {
+        Task<IEnumerable<Release>> GetByArtistAsync(string userId);
         Task<IEnumerable<Release>> GetByArtistAsync(int artistProfileId);
         Task<Release?> GetByIdAsync(Guid id, int artistProfileId);
         Task<Release?> GetByIdAsync(Guid id);

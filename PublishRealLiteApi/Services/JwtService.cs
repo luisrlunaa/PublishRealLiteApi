@@ -1,5 +1,5 @@
-﻿using Microsoft.IdentityModel.Tokens;
-using PublishRealLiteApi.Infrastructure.Identity;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.IdentityModel.Tokens;
 using PublishRealLiteApi.Services.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -15,7 +15,7 @@ namespace PublishRealLiteApi.Services
             _config = config;
         }
 
-        public string GenerateToken(AppUser user, IList<string> roles)
+        public string GenerateToken(IdentityUser user, IList<string> roles)
         {
             var jwtSettings = _config.GetSection("JwtSettings");
             var secret = jwtSettings.GetValue<string>("Secret") ?? throw new InvalidOperationException("JWT secret missing");

@@ -1,13 +1,13 @@
-﻿using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using PublishRealLiteApi.Infrastructure.Identity;
 using PublishRealLiteApi.Models;
 using System.Reflection;
 
 namespace PublishRealLiteApi.Infrastructure.Data
 {
-    public class AppDbContext : IdentityDbContext<AppUser>
+    public class AppDbContext : IdentityDbContext<IdentityUser>
     {
         private readonly ILogger<AppDbContext> _logger;
 
@@ -50,8 +50,8 @@ namespace PublishRealLiteApi.Infrastructure.Data
             {
                 b.HasKey(p => p.Id);
 
-                // Map to Identity user (AppUser) without requiring a CLR navigation property
-                b.HasOne<AppUser>()
+                // Map to Identity user (IdentityUser) without requiring a CLR navigation property
+                b.HasOne<IdentityUser>()
                  .WithOne()
                  .HasForeignKey<ArtistProfile>(p => p.UserId)
                  .OnDelete(DeleteBehavior.Cascade);
@@ -71,6 +71,7 @@ namespace PublishRealLiteApi.Infrastructure.Data
             {
                 r.HasKey(x => x.Id);
                 r.Property(x => x.Title).IsRequired();
+                r.Property(x => x.LinksJson).IsRequired(false).HasColumnType("nvarchar(max)"); ;
             });
 
             builder.Entity<Track>(t =>

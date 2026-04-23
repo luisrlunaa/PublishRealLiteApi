@@ -14,14 +14,14 @@ namespace PublishRealLiteApi.Infrastructure.Persistence.Repositories
         public async Task<IEnumerable<ArtistVideo>> GetByArtistAsync(int artistProfileId)
         {
             return await _db.ArtistVideos
-                .Where(v => v.ArtistProfileId == artistProfileId)
+                .Where(v => v.ArtistProfileId == artistProfileId && !v.IsDeleted)
                 .ToListAsync();
         }
 
         public async Task<ArtistVideo?> GetByIdAsync(int id, int artistProfileId)
         {
             return await _db.ArtistVideos
-                .FirstOrDefaultAsync(v => v.Id == id && v.ArtistProfileId == artistProfileId);
+                .FirstOrDefaultAsync(v => v.Id == id && v.ArtistProfileId == artistProfileId && !v.IsDeleted);
         }
 
         public async Task<ArtistVideo> AddAsync(ArtistVideo video)

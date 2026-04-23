@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -27,7 +28,27 @@ import {
   Users,
   Check,
   ChevronDown,
+  Pencil,
+  Eye,
+  Trash2,
+  Plus,
 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const profileSchema = z.object({
   artistName: z.string().min(1, "Artist name is required"),
@@ -52,6 +73,10 @@ export default function ProfilePage() {
   const [copiedCode, setCopiedCode] = useState(false);
   const [selectedSubProfileId, setSelectedSubProfileId] = useState<number | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [openManageMenu, setOpenManageMenu] = useState<number | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const router = useRouter();
 
   const {
     register,
@@ -174,6 +199,26 @@ const onSubmit = async (data: ProfileFormData) => {
       setCopiedCode(true);
       toast.success("Invitation code copied to clipboard");
       setTimeout(() => setCopiedCode(false), 2000);
+    }
+  };
+
+  const handleDeleteProfile = async (profileId: number) => {
+    setIsDeleting(true);
+    try {
+      await apiClient.deleteArtistProfile(profileId);
+      toast.success("Profile deleted successfully");
+      setDeleteConfirm(null);
+      // Refresh admin profile
+      const data = await apiClient.getMyAdminProfile();
+      setAdminProfile(data);
+    } catch (err) {
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? (err as { message: string }).message
+          : "Failed to delete profile";
+      toast.error(message);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -467,9 +512,19 @@ const onSubmit = async (data: ProfileFormData) => {
           {/* Team Members Table */}
           {adminProfile && adminProfile.subProfiles.length > 0 ? (
             <div className="rounded-xl border border-border bg-card p-6">
-              <h3 className="mb-4 text-lg font-semibold text-foreground">
-                Team Members ({adminProfile.subProfiles.length})
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-foreground">
+                  Team Members ({adminProfile.subProfiles.length})
+                </h3>
+                <Button 
+                  onClick={() => router.push("/dashboard/profile/create")}
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Create Profile
+                </Button>
+              </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -508,9 +563,30 @@ const onSubmit = async (data: ProfileFormData) => {
                           </code>
                         </td>
                         <td className="px-4 py-3">
-                          <Button variant="ghost" size="sm">
-                            Manage
-                          </Button>
+                          <DropdownMenu open={openManageMenu === subProfile.id} onOpenChange={(open) => setOpenManageMenu(open ? subProfile.id : null)}>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                Manage
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/profile/edit?id=${subProfile.id}`)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => router.push(`/dashboard/profile/id?id=${subProfile.id}`)}>
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                onClick={() => setDeleteConfirm(subProfile.id)}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))}
@@ -528,6 +604,29 @@ const onSubmit = async (data: ProfileFormData) => {
           )}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Profile</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this artist profile? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteConfirm && handleDeleteProfile(deleteConfirm)}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? <LoadingSpinner size="sm" className="mr-2" /> : null}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

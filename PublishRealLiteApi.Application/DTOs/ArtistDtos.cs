@@ -5,7 +5,7 @@
     public record CreateArtistDto(string ArtistName, string? Bio, string? SocialLinksJson);
 
     // For creating a profile with admin code
-    public record CreateArtistWithAdminCodeDto(string ArtistName, string? Bio, string? SocialLinksJson, string? AdminUserId);
+    public record CreateArtistWithAdminCodeDto(string ArtistName, string Email, string? Bio, string? SocialLinksJson, string? AdminUserId);
 
     // Response for admin profile with subordinate profiles
     public record AdminProfileResponseDto(

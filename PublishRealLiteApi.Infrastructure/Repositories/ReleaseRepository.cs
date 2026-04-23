@@ -11,10 +11,19 @@ namespace PublishRealLiteApi.Infrastructure.Persistence.Repositories
 
         public ReleaseRepository(AppDbContext db) => _db = db;
 
+        public async Task<IEnumerable<Release>> GetByArtistAsync(string userId)
+        {
+            return await _db.Releases
+                .Where(r => r.CreatedBy == userId && !r.IsDeleted)
+                .Include(r => r.Tracks)
+                .ToListAsync();
+        }
+
+
         public async Task<IEnumerable<Release>> GetByArtistAsync(int artistProfileId)
         {
             return await _db.Releases
-                .Where(r => r.ArtistProfileId == artistProfileId)
+                .Where(r => r.ArtistProfileId == artistProfileId && !r.IsDeleted)
                 .Include(r => r.Tracks)
                 .ToListAsync();
         }
@@ -23,14 +32,14 @@ namespace PublishRealLiteApi.Infrastructure.Persistence.Repositories
         {
             return await _db.Releases
                 .Include(r => r.Tracks)
-                .FirstOrDefaultAsync(r => r.Id == id && r.ArtistProfileId == artistProfileId);
+                .FirstOrDefaultAsync(r => r.Id == id && r.ArtistProfileId == artistProfileId && !r.IsDeleted);
         }
 
         public async Task<Release?> GetByIdAsync(Guid id)
         {
             return await _db.Releases
                 .Include(r => r.Tracks)
-                .FirstOrDefaultAsync(r => r.Id == id);
+                .FirstOrDefaultAsync(r => r.Id == id && !r.IsDeleted);
         }
 
         public async Task<Release> AddAsync(Release release)

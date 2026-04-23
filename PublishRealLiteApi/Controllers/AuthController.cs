@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using PublishRealLiteApi.DTOs;
-using PublishRealLiteApi.Infrastructure.Identity;
 using PublishRealLiteApi.Services.Interfaces;
 
 namespace PublishRealLiteApi.Controllers
@@ -10,11 +9,11 @@ namespace PublishRealLiteApi.Controllers
     [Route("api/[controller]")]
     public class AuthController : ControllerBase
     {
-        private readonly UserManager<AppUser> _userManager;
-        private readonly SignInManager<AppUser> _signInManager;
+        private readonly UserManager<IdentityUser> _userManager;
+        private readonly SignInManager<IdentityUser> _signInManager;
         private readonly IJwtService _jwtService;
 
-        public AuthController(UserManager<AppUser> userManager, SignInManager<AppUser> signInManager, IJwtService jwtService)
+        public AuthController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IJwtService jwtService)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -24,7 +23,7 @@ namespace PublishRealLiteApi.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterDto dto)
         {
-            var user = new AppUser { UserName = dto.Email, Email = dto.Email };
+            var user = new IdentityUser { UserName = dto.Email, Email = dto.Email };
             var result = await _userManager.CreateAsync(user, dto.Password);
             if (!result.Succeeded)
             {

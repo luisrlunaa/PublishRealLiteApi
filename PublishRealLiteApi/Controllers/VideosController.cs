@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PublishRealLiteApi.Application.Services.Interfaces;
 using PublishRealLiteApi.DTOs;
+using PublishRealLiteApi.Models;
 
 namespace PublishRealLiteApi.Controllers
 {
@@ -63,12 +64,12 @@ namespace PublishRealLiteApi.Controllers
         }
 
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(int id, [FromQuery] int artistProfileId)
         {
             var userId = CurrentUser.UserId;
             if (userId == null) return Unauthorized();
             var isAdmin = CurrentUser.IsAdmin;
-            var ok = await _service.DeleteAsync(id, userId!, isAdmin);
+            var ok = await _service.DeleteAsync(id, userId!, isAdmin, artistProfileId);
             if (!ok) return Forbid();
             return NoContent();
         }

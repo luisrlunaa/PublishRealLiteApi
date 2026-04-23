@@ -6,7 +6,7 @@ namespace PublishRealLiteApi.Application.Services.Interfaces
     {
         Task<List<ArtistProfileDto>> GetAllAsync();
         Task<ArtistProfileDto?> GetByIdAsync(int id);
-        Task<ArtistProfileDto?> CreateAsync(string userId, CreateArtistDto dto);
+        Task<ArtistProfileDto?> CreateAsync(string userId, CreateArtistDto dto, bool isAdmin);
         Task<ArtistProfileDto?> CreateWithAdminCodeAsync(string userId, CreateArtistWithAdminCodeDto dto);
         Task<AdminProfileResponseDto?> GetAdminProfileWithSubProfilesAsync(string userId);
         Task<List<ArtistProfileDto>> GetSubProfilesAsync(string adminUserId);

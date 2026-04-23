@@ -6,7 +6,6 @@ using PublishRealLiteApi.Application.Repositories.Interfaces;
 using PublishRealLiteApi.Application.Services;
 using PublishRealLiteApi.Application.Services.Interfaces;
 using PublishRealLiteApi.Infrastructure.Data;
-using PublishRealLiteApi.Infrastructure.Identity;
 using PublishRealLiteApi.Infrastructure.Persistence.Repositories;
 using PublishRealLiteApi.Infrastructure.Repositories;
 
@@ -21,7 +20,7 @@ public static class DependencyInjection
             options.UseSqlServer(config.GetConnectionString("DefaultConnection")));
 
         // Identity
-        services.AddIdentityCore<AppUser>(options =>
+        services.AddIdentityCore<IdentityUser>(options =>
         {
         })
             .AddRoles<IdentityRole>()
@@ -36,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<IArtistProfileService, ArtistProfileService>();
         services.AddScoped<IArtistVideoService, ArtistVideoService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IEmailService, EmailService>();
 
         // Repositories
         services.AddScoped<IReleaseRepository, ReleaseRepository>();

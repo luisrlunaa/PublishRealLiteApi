@@ -13,9 +13,15 @@ namespace PublishRealLiteApi.Controllers
         public ReleasesController(IReleaseService service, ICurrentUserService currentUser) : base(currentUser) => _service = service;
 
         [HttpGet]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAll([FromQuery] int artistProfileId)
         {
-            var list = await _service.GetAllAsync();
+            var list = Enumerable.Empty<ReleaseDto>();
+            var userId = CurrentUser.UserId;
+            var isAdmin = CurrentUser.IsAdmin;
+            if (isAdmin)
+                list = await _service.GetAllAsync(userId);
+            else
+                list = await _service.GetAllAsync(artistProfileId);
             return Ok(list);
         }
 
@@ -53,12 +59,11 @@ namespace PublishRealLiteApi.Controllers
 
         [Authorize]
         [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> Delete(Guid id)
+        public async Task<IActionResult> Delete(Guid id, [FromQuery] int artistProfileId)
         {
             var userId = CurrentUser.UserId;
             if (userId == null) return Unauthorized();
-            var isAdmin = CurrentUser.IsAdmin;
-            var ok = await _service.DeleteAsync(id, userId!, isAdmin);
+            var ok = await _service.DeleteAsync(id, userId!, artistProfileId);
             if (!ok) return Forbid();
             return NoContent();
         }

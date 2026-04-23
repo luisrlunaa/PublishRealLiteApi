@@ -2,7 +2,6 @@
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using PublishRealLiteApi.Infrastructure.Identity;
 using PublishRealLiteApi.Models;
 
 namespace PublishRealLiteApi.Infrastructure.Data
@@ -12,7 +11,7 @@ namespace PublishRealLiteApi.Infrastructure.Data
         // Initial seed: roles, admin and demo artist 
         public static async Task SeedAsync(IServiceProvider services)
         {
-            var userManager = services.GetRequiredService<UserManager<AppUser>>();
+            var userManager = services.GetRequiredService<UserManager<IdentityUser>>();
             var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
             var db = services.GetRequiredService<AppDbContext>();
 
@@ -42,7 +41,7 @@ namespace PublishRealLiteApi.Infrastructure.Data
             var adminEmail = "admin@publishreal.local";
             if (await userManager.FindByEmailAsync(adminEmail) == null)
             {
-                var admin = new AppUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true, DisplayName = "Admin" };
+                var admin = new IdentityUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true};
                 var res = await userManager.CreateAsync(admin, "AdminPass!23");
                 if (res.Succeeded)
                 {
@@ -54,7 +53,7 @@ namespace PublishRealLiteApi.Infrastructure.Data
             var artistEmail = "artist1@publishreal.local";
             if (await userManager.FindByEmailAsync(artistEmail) == null)
             {
-                var artistUser = new AppUser { UserName = artistEmail, Email = artistEmail, EmailConfirmed = true, DisplayName = "Demo Artist" };
+                var artistUser = new IdentityUser { UserName = artistEmail, Email = artistEmail, EmailConfirmed = true};
                 var res = await userManager.CreateAsync(artistUser, "Password123!");
                 if (res.Succeeded)
                 {

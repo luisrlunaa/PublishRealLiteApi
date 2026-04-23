@@ -158,7 +158,7 @@ namespace PublishRealLiteApi.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
-            modelBuilder.Entity("PublishRealLiteApi.Infrastructure.Identity.AppUser", b =>
+            modelBuilder.Entity("PublishRealLiteApi.Infrastructure.Identity.IdentityUser", b =>
                 {
                     b.Property<string>("Id")
                         .HasColumnType("nvarchar(450)");
@@ -675,7 +675,7 @@ namespace PublishRealLiteApi.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<string>", b =>
                 {
-                    b.HasOne("PublishRealLiteApi.Infrastructure.Identity.AppUser", null)
+                    b.HasOne("PublishRealLiteApi.Infrastructure.Identity.IdentityUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -684,7 +684,7 @@ namespace PublishRealLiteApi.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<string>", b =>
                 {
-                    b.HasOne("PublishRealLiteApi.Infrastructure.Identity.AppUser", null)
+                    b.HasOne("PublishRealLiteApi.Infrastructure.Identity.IdentityUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -699,7 +699,7 @@ namespace PublishRealLiteApi.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("PublishRealLiteApi.Infrastructure.Identity.AppUser", null)
+                    b.HasOne("PublishRealLiteApi.Infrastructure.Identity.IdentityUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -708,7 +708,7 @@ namespace PublishRealLiteApi.Infrastructure.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<string>", b =>
                 {
-                    b.HasOne("PublishRealLiteApi.Infrastructure.Identity.AppUser", null)
+                    b.HasOne("PublishRealLiteApi.Infrastructure.Identity.IdentityUser", null)
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -717,7 +717,7 @@ namespace PublishRealLiteApi.Infrastructure.Migrations
 
             modelBuilder.Entity("PublishRealLiteApi.Models.ArtistProfile", b =>
                 {
-                    b.HasOne("PublishRealLiteApi.Infrastructure.Identity.AppUser", null)
+                    b.HasOne("PublishRealLiteApi.Infrastructure.Identity.IdentityUser", null)
                         .WithOne()
                         .HasForeignKey("PublishRealLiteApi.Models.ArtistProfile", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)

@@ -60,7 +60,8 @@ namespace PublishRealLiteApi.Controllers
         {
             var userId = CurrentUser.UserId;
             if (userId == null) return Unauthorized();
-            var result = await _service.CreateAsync(userId, dto);
+            var isAdmin = CurrentUser.IsAdmin;
+            var result = await _service.CreateAsync(userId, dto, isAdmin);
             if (result == null) return BadRequest("The user already has a profile.");
             return CreatedAtAction(nameof(Get), new { id = result.Id }, result);
         }

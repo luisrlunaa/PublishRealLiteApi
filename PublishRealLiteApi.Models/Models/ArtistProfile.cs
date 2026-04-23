@@ -10,7 +10,7 @@ namespace PublishRealLiteApi.Models
         // FK to Identity user (string Id) 
         public string UserId { get; set; } = string.Empty;
 
-        // Navigation to the Identity user is defined in the infrastructure project (AppUser).
+        // Navigation to the Identity user is defined in the infrastructure project (IdentityUser).
         // The navigation property is not declared here to keep the Models project decoupled from the Identity type.
         public string ArtistName { get; set; } = string.Empty;
         public string? Bio { get; set; }

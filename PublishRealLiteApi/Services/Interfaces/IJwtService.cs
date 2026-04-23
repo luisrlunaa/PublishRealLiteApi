@@ -1,9 +1,9 @@
-﻿using PublishRealLiteApi.Infrastructure.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 
 namespace PublishRealLiteApi.Services.Interfaces
 {
     public interface IJwtService
     {
-        string GenerateToken(AppUser user, IList<string> roles);
+        string GenerateToken(IdentityUser user, IList<string> roles);
     }
 }

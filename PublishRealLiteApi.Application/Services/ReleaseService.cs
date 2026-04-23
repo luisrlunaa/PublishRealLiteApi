@@ -13,9 +13,15 @@ namespace PublishRealLiteApi.Application.Services
             _releaseRepository = releaseRepository;
         }
 
-        public async Task<IEnumerable<ReleaseDto>> GetAllAsync()
+        public async Task<IEnumerable<ReleaseDto>> GetAllAsync(string userId)
         {
-            var list = await _releaseRepository.GetByArtistAsync(0);
+            var list = await _releaseRepository.GetByArtistAsync(userId);
+            return list.Select(r => new ReleaseDto(r.Id, r.ArtistProfileId, r.Title, r.ReleaseDate, r.Genre, r.Label, r.UPC, r.ISRC, r.LinksJson));
+        }
+
+        public async Task<IEnumerable<ReleaseDto>> GetAllAsync(int artistProfileId)
+        {
+            var list = await _releaseRepository.GetByArtistAsync(artistProfileId);
             return list.Select(r => new ReleaseDto(r.Id, r.ArtistProfileId, r.Title, r.ReleaseDate, r.Genre, r.Label, r.UPC, r.ISRC, r.LinksJson));
         }
 
@@ -36,7 +42,8 @@ namespace PublishRealLiteApi.Application.Services
                 Label = dto.Label,
                 UPC = dto.UPC,
                 ISRC = dto.ISRC,
-                LinksJson = dto.LinksJson
+                LinksJson = dto.LinksJson,
+                CreatedBy = userId
             };
             var added = await _releaseRepository.AddAsync(release);
             return new ReleaseDto(added.Id, added.ArtistProfileId, added.Title, added.ReleaseDate, added.Genre, added.Label, added.UPC, added.ISRC, added.LinksJson);
@@ -53,12 +60,13 @@ namespace PublishRealLiteApi.Application.Services
             existing.UPC = dto.UPC;
             existing.ISRC = dto.ISRC;
             existing.LinksJson = dto.LinksJson;
+            existing.UpdatedBy = userId;
             return await _releaseRepository.UpdateAsync(existing);
         }
 
-        public async Task<bool> DeleteAsync(Guid id, string userId, bool isAdmin)
+        public async Task<bool> DeleteAsync(Guid id, string userId, int artistProfileId)
         {
-            return await _releaseRepository.DeleteAsync(id, 0);
+            return await _releaseRepository.DeleteAsync(id, artistProfileId);
         }
     }
 }

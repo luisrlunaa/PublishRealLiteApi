@@ -11,10 +11,10 @@ namespace PublishRealLiteApi.Infrastructure.Repositories
         public ArtistProfileRepository(AppDbContext db) => _db = db;
 
         public async Task<List<ArtistProfile>> GetAllAsync() =>
-            await _db.ArtistProfiles.ToListAsync();
+            await _db.ArtistProfiles.Where(x=>!x.IsDeleted).ToListAsync();
 
         public async Task<ArtistProfile?> GetByIdAsync(int id) =>
-            await _db.ArtistProfiles.FindAsync(id);
+            await _db.ArtistProfiles.FirstOrDefaultAsync(x=>x.Id==id && !x.IsDeleted);
 
         public async Task<ArtistProfile?> GetByUserIdAsync(string userId) =>
             await _db.ArtistProfiles.FirstOrDefaultAsync(x => x.UserId == userId && !x.IsDeleted);

@@ -14,7 +14,7 @@ namespace PublishRealLiteApi.Infrastructure.Persistence.Repositories
         public async Task<IEnumerable<Team>> GetByArtistAsync(int artistProfileId)
         {
             return await _db.Teams
-                .Where(t => t.ArtistProfileId == artistProfileId)
+                .Where(t => t.ArtistProfileId == artistProfileId && !t.IsDeleted)
                 .Include(t => t.Members)
                 .ToListAsync();
         }
@@ -23,7 +23,7 @@ namespace PublishRealLiteApi.Infrastructure.Persistence.Repositories
         {
             return await _db.Teams
                 .Include(t => t.Members)
-                .FirstOrDefaultAsync(t => t.Id == id && t.ArtistProfileId == artistProfileId);
+                .FirstOrDefaultAsync(t => t.Id == id && t.ArtistProfileId == artistProfileId && !t.IsDeleted);
         }
 
         public async Task<Team> AddAsync(Team team)

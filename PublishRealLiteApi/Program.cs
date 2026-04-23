@@ -6,7 +6,6 @@ using Microsoft.IdentityModel.Tokens;
 using PublishRealLiteApi.Application;
 using PublishRealLiteApi.Infrastructure;
 using PublishRealLiteApi.Infrastructure.Data;
-using PublishRealLiteApi.Infrastructure.Identity;
 using PublishRealLiteApi.Services;
 using PublishRealLiteApi.Services.Interfaces;
 using Scalar.AspNetCore;
@@ -30,16 +29,15 @@ builder.Services.AddAutoMapper(cfg =>
 builder.Services.AddInfrastructure(builder.Configuration);
 
 // 1. Register Identity Services
-builder.Services.AddIdentity<AppUser, IdentityRole>(options =>
+builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
-    // Configure password requirements here if you want
     options.Password.RequireDigit = false;
     options.Password.RequiredLength = 6;
     options.Password.RequireNonAlphanumeric = false;
     options.Password.RequireUppercase = false;
     options.Password.RequireLowercase = false;
 })
-.AddEntityFrameworkStores<AppDbContext>() // Connects Identity to your Database
+.AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
 builder.Services.AddScoped<IJwtService, JwtService>();
@@ -158,7 +156,6 @@ using (var scope = app.Services.CreateScope())
             var pending = db.Database.GetPendingMigrations().ToList();
             if (pending.Any())
             {
-                logger.LogInformation("Applying {Count} pending migration(s)...", pending.Count);
                 db.Database.Migrate();
             }
             else

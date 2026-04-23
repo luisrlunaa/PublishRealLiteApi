@@ -20,7 +20,7 @@ namespace PublishRealLiteApi.Infrastructure.Persistence.Repositories
 
         public async Task<TeamInvite?> GetByTokenAsync(string token)
         {
-            return await _db.TeamInvites.Include(i => i.Team).FirstOrDefaultAsync(i => i.Token == token);
+            return await _db.TeamInvites.Include(i => i.Team).FirstOrDefaultAsync(i => i.Token == token && !i.IsDeleted);
         }
 
         public async Task<bool> UpdateAsync(TeamInvite invite)

@@ -62,10 +62,10 @@ namespace PublishRealLiteApi.Application.Services
             return true;
         }
 
-        public async Task<bool> DeleteAsync(int id, string userId, bool isAdmin)
+        public async Task<bool> DeleteAsync(int id, string userId, bool isAdmin, int artistProfileId)
         {
             var video = await _repo.GetByIdAsync(id);
-            if (video == null) return false;
+            if (video == null || video.ArtistProfileId != artistProfileId) return false;
             var profile = await _artistRepo.GetByIdAsync(video.ArtistProfileId);
             if (!isAdmin && profile?.UserId != userId) return false;
             await _repo.DeleteAsync(video);

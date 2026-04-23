@@ -184,8 +184,11 @@ async getArtistProfile(id: number): Promise<ArtistProfileDto> {
   }
 
   // Releases
-  async getReleases(): Promise<ReleaseDto[]> {
-    return this.request("/Releases");
+  async getReleases(artistProfileId?: number): Promise<ReleaseDto[]> {
+    const endpoint = artistProfileId 
+      ? `/Releases?artistProfileId=${artistProfileId}`
+      : "/Releases";
+    return this.request(endpoint);
   }
 
   async getRelease(id: string): Promise<ReleaseDto> {
@@ -206,11 +209,11 @@ async getArtistProfile(id: number): Promise<ArtistProfileDto> {
     });
   }
 
-  async deleteRelease(id: string): Promise<void> {
-    return this.request(`/Releases/${id}`, {
+  async deleteRelease(id: string, artistProfileId: number) {
+    return this.request(`/releases/${id}?artistProfileId=${artistProfileId}`, {
       method: "DELETE",
     });
-  }
+}
 
   // Tracks
   async getTracksByRelease(releaseId: string): Promise<TrackDto[]> {

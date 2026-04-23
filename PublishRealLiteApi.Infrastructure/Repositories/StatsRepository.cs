@@ -15,8 +15,8 @@ namespace PublishRealLiteApi.Infrastructure.Persistence.Repositories
         {
             var q = _db.StreamStats.AsQueryable();
 
-            if (artistProfileId.HasValue) q = q.Where(s => s.ArtistProfileId == artistProfileId.Value);
-            if (releaseId.HasValue && releaseId.Value > 0) q = q.Where(s => s.ReleaseId == releaseId.Value);
+            if (artistProfileId.HasValue) q = q.Where(s => s.ArtistProfileId == artistProfileId.Value && !s.IsDeleted);
+            if (releaseId.HasValue && releaseId.Value > 0) q = q.Where(s => s.ReleaseId == releaseId.Value && !s.IsDeleted);
 
             q = q.Where(s => s.Date >= from && s.Date <= to);
 
