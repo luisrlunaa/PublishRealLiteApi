@@ -1,9 +1,9 @@
 using Microsoft.AspNetCore.Identity;
+using Microsoft.Extensions.Configuration;
 using PublishRealLiteApi.Application.Repositories.Interfaces;
 using PublishRealLiteApi.Application.Services.Interfaces;
 using PublishRealLiteApi.DTOs;
 using PublishRealLiteApi.Models;
-using Microsoft.Extensions.Configuration;
 
 namespace PublishRealLiteApi.Application.Services
 {

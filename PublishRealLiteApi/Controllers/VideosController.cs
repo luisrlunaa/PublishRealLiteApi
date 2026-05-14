@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using PublishRealLiteApi.Application.Services.Interfaces;
 using PublishRealLiteApi.DTOs;
-using PublishRealLiteApi.Models;
 
 namespace PublishRealLiteApi.Controllers
 {

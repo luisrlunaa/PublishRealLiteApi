@@ -41,7 +41,7 @@ namespace PublishRealLiteApi.Infrastructure.Data
             var adminEmail = "admin@publishreal.local";
             if (await userManager.FindByEmailAsync(adminEmail) == null)
             {
-                var admin = new IdentityUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true};
+                var admin = new IdentityUser { UserName = adminEmail, Email = adminEmail, EmailConfirmed = true };
                 var res = await userManager.CreateAsync(admin, "AdminPass!23");
                 if (res.Succeeded)
                 {
@@ -53,7 +53,7 @@ namespace PublishRealLiteApi.Infrastructure.Data
             var artistEmail = "artist1@publishreal.local";
             if (await userManager.FindByEmailAsync(artistEmail) == null)
             {
-                var artistUser = new IdentityUser { UserName = artistEmail, Email = artistEmail, EmailConfirmed = true};
+                var artistUser = new IdentityUser { UserName = artistEmail, Email = artistEmail, EmailConfirmed = true };
                 var res = await userManager.CreateAsync(artistUser, "Password123!");
                 if (res.Succeeded)
                 {

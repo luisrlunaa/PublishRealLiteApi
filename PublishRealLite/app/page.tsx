@@ -66,6 +66,9 @@ export default function LandingPage() {
             </span>
           </Link>
           <div className="flex items-center gap-4">
+            <Link href="/apply">
+              <Button variant="ghost">Apply</Button>
+            </Link>
             <Link href="/login">
               <Button variant="ghost">Sign in</Button>
             </Link>

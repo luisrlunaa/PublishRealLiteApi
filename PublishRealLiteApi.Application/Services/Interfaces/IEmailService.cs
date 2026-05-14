@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace PublishRealLiteApi.Application.Services.Interfaces
+﻿namespace PublishRealLiteApi.Application.Services.Interfaces
 {
     public interface IEmailService
     {
