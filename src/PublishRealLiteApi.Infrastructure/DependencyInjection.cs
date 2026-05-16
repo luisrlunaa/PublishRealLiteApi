@@ -8,6 +8,8 @@ using PublishRealLiteApi.Application.Services.Interfaces;
 using PublishRealLiteApi.Infrastructure.Data;
 using PublishRealLiteApi.Infrastructure.Persistence.Repositories;
 using PublishRealLiteApi.Infrastructure.Repositories;
+using PublishRealLiteApi.Infrastructure.Services;
+using Resend;
 
 namespace PublishRealLiteApi.Infrastructure;
 
@@ -35,7 +37,11 @@ public static class DependencyInjection
         services.AddScoped<IArtistProfileService, ArtistProfileService>();
         services.AddScoped<IArtistVideoService, ArtistVideoService>();
         services.AddScoped<IAuthService, AuthService>();
-        services.AddScoped<IEmailService, EmailService>();
+        services.AddResend(options =>
+        {
+            options.ApiToken = config["Resend:ApiKey"] ?? string.Empty;
+        });
+        services.AddScoped<IEmailService, ResendEmailService>();
 
         // Repositories
         services.AddScoped<IReleaseRepository, ReleaseRepository>();

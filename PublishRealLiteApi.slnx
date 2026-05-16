@@ -1,6 +1,11 @@
 <Solution>
-  <Project Path="src/PublishRealLiteApi.Application/PublishRealLiteApi.Application.csproj" />
-  <Project Path="src/PublishRealLiteApi.Infrastructure/PublishRealLiteApi.Infrastructure.csproj" />
-  <Project Path="src/PublishRealLiteApi.Models/PublishRealLiteApi.Models.csproj" />
-  <Project Path="src/PublishRealLiteApi/PublishRealLiteApi.csproj" />
+  <Folder Name="/Application/">
+    <Project Path="src/PublishRealLiteApi.Application/PublishRealLiteApi.Application.csproj" />
+    <Project Path="src/PublishRealLiteApi.Infrastructure/PublishRealLiteApi.Infrastructure.csproj" />
+    <Project Path="src/PublishRealLiteApi.Models/PublishRealLiteApi.Models.csproj" />
+    <Project Path="src/PublishRealLiteApi/PublishRealLiteApi.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="tests/PublishRealLiteApi.IntegrationTests/PublishRealLiteApi.IntegrationTests.csproj" />
+  </Folder>
 </Solution>
