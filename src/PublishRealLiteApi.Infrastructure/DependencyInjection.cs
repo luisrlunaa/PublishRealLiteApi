@@ -52,6 +52,11 @@ public static class DependencyInjection
         services.AddScoped<IArtistProfileRepository, ArtistProfileRepository>();
         services.AddScoped<IArtistVideoRepository, ArtistVideoRepository>();
 
+        // Turnstile
+        services.AddHttpClient<ITurnstileService, TurnstileService>();
+        services.AddScoped<IArtistApplicationService, ArtistApplicationService>();
+        services.AddScoped<IArtistApplicationRepository, ArtistApplicationRepository>();
+
         // Health checks
         services.AddHealthChecks()
                 .AddCheck<DatabaseHealthCheck>("Database");

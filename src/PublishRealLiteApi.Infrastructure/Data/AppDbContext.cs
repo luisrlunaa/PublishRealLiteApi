@@ -17,6 +17,7 @@ namespace PublishRealLiteApi.Infrastructure.Data
         }
 
         public DbSet<ArtistProfile> ArtistProfiles => Set<ArtistProfile>();
+        public DbSet<ArtistApplication> ArtistApplications => Set<ArtistApplication>();
         public DbSet<Release> Releases => Set<Release>();
         public DbSet<Track> Tracks => Set<Track>();
         public DbSet<ArtistVideo> ArtistVideos => Set<ArtistVideo>();
@@ -125,6 +126,19 @@ namespace PublishRealLiteApi.Infrastructure.Data
                 ti.Property(x => x.Email).HasMaxLength(256).IsRequired();
                 ti.Property(x => x.Token).HasMaxLength(200).IsRequired();
                 ti.HasIndex(x => x.Token).IsUnique();
+            });
+
+            builder.Entity<ArtistApplication>(a =>
+            {
+                a.HasKey(x => x.Id);
+                a.Property(x => x.ArtistName).HasMaxLength(300).IsRequired();
+                a.Property(x => x.Email).HasMaxLength(256).IsRequired();
+                a.Property(x => x.Country).HasMaxLength(100).IsRequired();
+                a.Property(x => x.InstagramUrl).HasMaxLength(500).IsRequired();
+                a.Property(x => x.Role).HasMaxLength(50).IsRequired();
+                a.Property(x => x.SongAsComposerUrl).HasMaxLength(500);
+                a.Property(x => x.SongAsArtistUrl).HasMaxLength(500);
+                a.Property(x => x.OwnershipType).HasMaxLength(50).IsRequired();
             });
 
             // Strict validation: detect entities without key that belong to your domain and fail with clear message

@@ -24,6 +24,7 @@ import type {
   InviteRequest,
   UploadResult,
   ApiError,
+  SubmitApplicationDto,
 } from "./types";
 
 const API_BASE_URL =
@@ -305,6 +306,14 @@ async getArtistProfile(id: number): Promise<ArtistProfileDto> {
   async acceptTeamInvite(token: string): Promise<void> {
     return this.request(`/Teams/accept?token=${encodeURIComponent(token)}`, {
       method: "POST",
+    });
+  }
+
+  // Applications
+  async submitApplication(dto: SubmitApplicationDto): Promise<void> {
+    return this.request("/Applications", {
+      method: "POST",
+      body: JSON.stringify(dto),
     });
   }
 

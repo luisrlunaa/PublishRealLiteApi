@@ -56,8 +56,8 @@ namespace PublishRealLiteApi.Controllers
             var isAdmin = CurrentUser.IsAdmin;
             if (!isAdmin && profile?.UserId != userId) return Forbid();
 
-            track.Position = track.Position;
-            track.Title = track.Title;
+            track.Position = dto.Position;
+            track.Title = dto.Title;
             track.UpdatedAt = DateTime.UtcNow;
 
             await _db.SaveChangesAsync();

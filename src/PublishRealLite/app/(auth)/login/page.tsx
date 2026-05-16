@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TurnstileWidget } from "@/components/ui/turnstile-widget";
 import { LoadingSpinner } from "@/components/loading-states";
 import { Eye, EyeOff, Music2 } from "lucide-react";
 
@@ -26,6 +27,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const {
     register,
@@ -40,7 +42,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      await login(data);
+      await login({ ...data, turnstileToken: turnstileToken! });
       router.push("/dashboard");
     } catch (err) {
       if (err && typeof err === "object" && "message" in err) {
@@ -131,10 +133,15 @@ export default function LoginPage() {
               )}
             </div>
 
+            <TurnstileWidget
+              onSuccess={setTurnstileToken}
+              onExpire={() => setTurnstileToken(null)}
+            />
+
             <Button
               type="submit"
               className="h-12 w-full text-base font-semibold"
-              disabled={isLoading}
+              disabled={isLoading || !turnstileToken}
             >
               {isLoading ? (
                 <LoadingSpinner size="sm" className="mr-2" />

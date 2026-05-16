@@ -4,11 +4,27 @@
 export interface RegisterDto {
   email: string;
   password: string;
+  turnstileToken: string;
 }
 
 export interface LoginDto {
   email: string;
   password: string;
+  turnstileToken: string;
+}
+
+export interface SubmitApplicationDto {
+  artistName: string;
+  email: string;
+  country: string;
+  instagramUrl: string;
+  role: string;
+  songAsComposerUrl?: string;
+  songAsArtistUrl?: string;
+  affiliatedWithPro: boolean;
+  ownershipType: string;
+  interestedInSigning: boolean;
+  turnstileToken: string;
 }
 
 export interface AuthResponse {

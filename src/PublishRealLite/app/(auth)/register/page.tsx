@@ -10,6 +10,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { TurnstileWidget } from "@/components/ui/turnstile-widget";
 import { LoadingSpinner } from "@/components/loading-states";
 import { Eye, EyeOff, Music2, Check } from "lucide-react";
 
@@ -35,6 +36,7 @@ export default function RegisterPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [useAdminCode, setUseAdminCode] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const {
     register,
@@ -52,7 +54,7 @@ export default function RegisterPage() {
       // If admin code is provided, create profile with admin code after registration
       if (data.adminCode?.trim()) {
         // First register the user
-        const registerResponse = await registerUser({ email: data.email, password: data.password });
+        const registerResponse = await registerUser({ email: data.email, password: data.password, turnstileToken: turnstileToken! });
 
         // Then create profile with admin code
         try {
@@ -70,7 +72,7 @@ export default function RegisterPage() {
         }
       } else {
         // Standard registration without admin code
-        await registerUser({ email: data.email, password: data.password });
+        await registerUser({ email: data.email, password: data.password, turnstileToken: turnstileToken! });
       }
 
       router.push("/dashboard");
@@ -235,10 +237,15 @@ export default function RegisterPage() {
                 </div>
               )}
 
+              <TurnstileWidget
+                onSuccess={setTurnstileToken}
+                onExpire={() => setTurnstileToken(null)}
+              />
+
               <Button
                 type="submit"
                 className="h-12 w-full text-base font-semibold"
-                disabled={isLoading}
+                disabled={isLoading || !turnstileToken}
               >
                 {isLoading ? (
                   <LoadingSpinner size="sm" className="mr-2" />

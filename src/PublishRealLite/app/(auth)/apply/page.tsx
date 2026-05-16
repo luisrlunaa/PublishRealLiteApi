@@ -6,10 +6,12 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { apiClient } from "@/lib/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { TurnstileWidget } from "@/components/ui/turnstile-widget";
 import { LoadingSpinner } from "@/components/loading-states";
 import { Music2, Check, ArrowLeft, Instagram, Globe } from "lucide-react";
 
@@ -43,6 +45,7 @@ export default function ApplyPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [lang, setLang] = useState<"es" | "en">("es");
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
 
   const {
     register,
@@ -56,27 +59,26 @@ export default function ApplyPage() {
 
   const selectedRole = watch("definicion");
 
-  // 2. Mail Sender Function (Formspree Integration)
   const onSubmit = async (data: ApplyFormData) => {
     setIsLoading(true);
     try {
-      const response = await fetch("https://formspree.io/f/mkokqnej", {
-        method: "POST",
-        headers: { 
-            "Accept": "application/json",
-            "Content-Type": "application/json" 
-        },
-        body: JSON.stringify(data),
+      await apiClient.submitApplication({
+        artistName: data.nombre,
+        email: data.email,
+        country: data.pais,
+        instagramUrl: data.instagram,
+        role: data.definicion,
+        songAsComposerUrl: data.cancion_compositor || undefined,
+        songAsArtistUrl: data.cancion_artista || undefined,
+        affiliatedWithPro: data.pro === "Sí",
+        ownershipType: data.derechos,
+        interestedInSigning: data.acuerdo === "Sí",
+        turnstileToken: turnstileToken!,
       });
-
-      if (response.ok) {
-        setSubmitted(true);
-      } else {
-        alert("Error sending application. Please try again.");
-      }
+      setSubmitted(true);
     } catch (err) {
       console.error("Submission error:", err);
-      alert("Network error. Please check your connection.");
+      alert("Error sending application. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -271,7 +273,12 @@ export default function ApplyPage() {
                 </div>
               </div>
 
-              <Button type="submit" className="w-full h-14 text-lg font-bold shadow-lg shadow-primary/20" disabled={isLoading}>
+              <TurnstileWidget
+                onSuccess={setTurnstileToken}
+                onExpire={() => setTurnstileToken(null)}
+              />
+
+              <Button type="submit" className="w-full h-14 text-lg font-bold shadow-lg shadow-primary/20" disabled={isLoading || !turnstileToken}>
                 {isLoading ? <LoadingSpinner size="sm" className="mr-2" /> : null}
                 {isLoading ? (lang === "es" ? "Enviando..." : "Sending...") : content[lang].btn}
               </Button>
