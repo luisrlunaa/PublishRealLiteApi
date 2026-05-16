@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http.Json;
-using PublishRealLiteApi.DTOs;
+using PublishRealLiteApi.Features.ArtistProfiles;
+using PublishRealLiteApi.Features.Releases;
+using PublishRealLiteApi.Features.Tracks;
 using PublishRealLiteApi.IntegrationTests.Helpers;
 using PublishRealLiteApi.IntegrationTests.Infrastructure;
 using Shouldly;
@@ -9,16 +11,16 @@ namespace PublishRealLiteApi.IntegrationTests.Tests.Tracks;
 
 public class TracksTests(ApiFactory factory) : BaseIntegrationTest(factory)
 {
-    private async Task<(ArtistProfileDto profile, ReleaseDto release)> CreateProfileAndReleaseAsync()
+    private async Task<(CreateArtistProfile.Response profile, CreateRelease.Response release)> CreateProfileAndReleaseAsync()
     {
         var token = await AuthHelper.RegisterAndGetTokenAsync(Client);
         UseToken(token);
 
         var profile = await (await Client.PostAsJsonAsync("/api/artistprofiles", FakeData.Artist()))
-            .Content.ReadFromJsonAsync<ArtistProfileDto>();
+            .Content.ReadFromJsonAsync<CreateArtistProfile.Response>();
 
         var release = await (await Client.PostAsJsonAsync("/api/releases", FakeData.Release(profile!.Id)))
-            .Content.ReadFromJsonAsync<ReleaseDto>();
+            .Content.ReadFromJsonAsync<CreateRelease.Response>();
 
         return (profile, release!);
     }
@@ -31,7 +33,7 @@ public class TracksTests(ApiFactory factory) : BaseIntegrationTest(factory)
         var response = await Client.GetAsync($"/api/tracks/by-release/{release.Id}");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var tracks = await response.Content.ReadFromJsonAsync<TrackDto[]>();
+        var tracks = await response.Content.ReadFromJsonAsync<GetTracksByRelease.Response[]>();
         tracks.ShouldNotBeNull();
         tracks.ShouldBeEmpty();
     }
@@ -40,7 +42,7 @@ public class TracksTests(ApiFactory factory) : BaseIntegrationTest(factory)
     public async Task Create_WithoutAuth_ReturnsUnauthorized()
     {
         var response = await Client.PostAsJsonAsync("/api/tracks",
-            new CreateTrackDto(Guid.NewGuid(), 1, "Track"));
+            new CreateTrack.Command(Guid.NewGuid(), 1, "Track"));
 
         response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }
@@ -54,7 +56,7 @@ public class TracksTests(ApiFactory factory) : BaseIntegrationTest(factory)
             FakeData.Track(release.Id, position: 1));
 
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
-        var track = await response.Content.ReadFromJsonAsync<TrackDto>();
+        var track = await response.Content.ReadFromJsonAsync<CreateTrack.Response>();
         track.ShouldNotBeNull();
         track.ReleaseId.ShouldBe(release.Id);
         track.Position.ShouldBe(1);
@@ -69,7 +71,7 @@ public class TracksTests(ApiFactory factory) : BaseIntegrationTest(factory)
 
         var response = await Client.GetAsync($"/api/tracks/by-release/{release.Id}");
 
-        var tracks = await response.Content.ReadFromJsonAsync<TrackDto[]>();
+        var tracks = await response.Content.ReadFromJsonAsync<GetTracksByRelease.Response[]>();
         tracks.ShouldNotBeNull();
         tracks.Length.ShouldBe(2);
         tracks[0].Position.ShouldBe(1);
@@ -81,30 +83,27 @@ public class TracksTests(ApiFactory factory) : BaseIntegrationTest(factory)
     {
         var (_, release) = await CreateProfileAndReleaseAsync();
         var created = await (await Client.PostAsJsonAsync("/api/tracks", FakeData.Track(release.Id)))
-            .Content.ReadFromJsonAsync<TrackDto>();
+            .Content.ReadFromJsonAsync<CreateTrack.Response>();
 
         var response = await Client.DeleteAsync($"/api/tracks/{created!.Id}");
 
         response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
     }
 
-    // NOTE: TracksController.Update has a bug — it assigns track.Position = track.Position
-    // and track.Title = track.Title instead of dto.Position / dto.Title. This test documents
-    // the expected behavior and will fail until the bug is fixed.
     [Fact]
     public async Task Update_Track_PersistsNewValues()
     {
         var (_, release) = await CreateProfileAndReleaseAsync();
         var created = await (await Client.PostAsJsonAsync("/api/tracks", FakeData.Track(release.Id, 1)))
-            .Content.ReadFromJsonAsync<TrackDto>();
+            .Content.ReadFromJsonAsync<CreateTrack.Response>();
 
         var response = await Client.PutAsJsonAsync($"/api/tracks/{created!.Id}",
-            new UpdateTrackDto(Position: 5, Title: "Renamed Track"));
+            new UpdateTrack.Command(Guid.Empty, 5, "Renamed Track"));
 
         response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
         var tracks = await (await Client.GetAsync($"/api/tracks/by-release/{release.Id}"))
-            .Content.ReadFromJsonAsync<TrackDto[]>();
+            .Content.ReadFromJsonAsync<GetTracksByRelease.Response[]>();
 
         var updated = tracks!.Single(t => t.Id == created.Id);
         updated.Title.ShouldBe("Renamed Track");

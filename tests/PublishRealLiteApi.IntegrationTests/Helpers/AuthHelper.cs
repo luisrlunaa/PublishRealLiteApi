@@ -1,5 +1,5 @@
 using System.Net.Http.Json;
-using PublishRealLiteApi.DTOs;
+using PublishRealLiteApi.Features.Auth;
 
 namespace PublishRealLiteApi.IntegrationTests.Helpers;
 
@@ -13,7 +13,7 @@ public static class AuthHelper
     {
         email ??= $"user_{Guid.NewGuid():N}@test.com";
 
-        var reg = await client.PostAsJsonAsync("/api/auth/register", new RegisterDto(email, password));
+        var reg = await client.PostAsJsonAsync("/api/auth/register", new Register.Command(email, password, "test"));
         reg.EnsureSuccessStatusCode();
 
         return await LoginAndGetTokenAsync(client, email, password);
@@ -24,10 +24,10 @@ public static class AuthHelper
         string email,
         string password = "Password123!")
     {
-        var login = await client.PostAsJsonAsync("/api/auth/login", new LoginDto(email, password));
+        var login = await client.PostAsJsonAsync("/api/auth/login", new Login.Command(email, password, "test"));
         login.EnsureSuccessStatusCode();
 
-        var auth = await login.Content.ReadFromJsonAsync<AuthResponseDto>();
+        var auth = await login.Content.ReadFromJsonAsync<Login.Response>();
         return auth!.Token;
     }
 }

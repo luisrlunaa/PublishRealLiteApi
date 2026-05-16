@@ -13,7 +13,6 @@ public static class UpdateArtistProfile
     {
         public Validator()
         {
-            RuleFor(x => x.Id).GreaterThan(0);
             RuleFor(x => x.ArtistName).NotEmpty().MaximumLength(200);
         }
     }

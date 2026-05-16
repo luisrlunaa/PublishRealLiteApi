@@ -361,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# The [Rr]eleases/ rule above matches VSA feature/test folders — negate them
+!src/**/Releases/
+!src/**/Releases/**
+!tests/**/Releases/
+!tests/**/Releases/**

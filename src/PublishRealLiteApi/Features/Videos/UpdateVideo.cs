@@ -13,7 +13,6 @@ public static class UpdateVideo
     {
         public Validator()
         {
-            RuleFor(x => x.Id).GreaterThan(0);
             RuleFor(x => x.Title).NotEmpty().MaximumLength(200);
             RuleFor(x => x.VideoUrl).NotEmpty();
             RuleFor(x => x.ThumbnailUrl).NotEmpty();

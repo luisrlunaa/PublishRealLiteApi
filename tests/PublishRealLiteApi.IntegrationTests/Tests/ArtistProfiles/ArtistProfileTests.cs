@@ -1,6 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
-using PublishRealLiteApi.DTOs;
+using PublishRealLiteApi.Features.ArtistProfiles;
 using PublishRealLiteApi.IntegrationTests.Helpers;
 using PublishRealLiteApi.IntegrationTests.Infrastructure;
 using Shouldly;
@@ -15,7 +15,7 @@ public class ArtistProfileTests(ApiFactory factory) : BaseIntegrationTest(factor
         var response = await Client.GetAsync("/api/artistprofiles");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var profiles = await response.Content.ReadFromJsonAsync<ArtistProfileDto[]>();
+        var profiles = await response.Content.ReadFromJsonAsync<GetArtistProfiles.Response[]>();
         profiles.ShouldNotBeNull();
         profiles.ShouldBeEmpty();
     }
@@ -37,7 +37,7 @@ public class ArtistProfileTests(ApiFactory factory) : BaseIntegrationTest(factor
         var response = await Client.PostAsJsonAsync("/api/artistprofiles", FakeData.Artist());
 
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
-        var profile = await response.Content.ReadFromJsonAsync<ArtistProfileDto>();
+        var profile = await response.Content.ReadFromJsonAsync<CreateArtistProfile.Response>();
         profile.ShouldNotBeNull();
         profile.Id.ShouldBeGreaterThan(0);
         profile.IsAdminProfile.ShouldBeTrue();
@@ -61,12 +61,12 @@ public class ArtistProfileTests(ApiFactory factory) : BaseIntegrationTest(factor
         var token = await AuthHelper.RegisterAndGetTokenAsync(Client);
         UseToken(token);
         var created = await (await Client.PostAsJsonAsync("/api/artistprofiles", FakeData.Artist()))
-            .Content.ReadFromJsonAsync<ArtistProfileDto>();
+            .Content.ReadFromJsonAsync<CreateArtistProfile.Response>();
 
         var response = await Client.GetAsync($"/api/artistprofiles/{created!.Id}");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var profile = await response.Content.ReadFromJsonAsync<ArtistProfileDto>();
+        var profile = await response.Content.ReadFromJsonAsync<GetArtistProfileById.Response>();
         profile!.Id.ShouldBe(created.Id);
     }
 
@@ -76,12 +76,12 @@ public class ArtistProfileTests(ApiFactory factory) : BaseIntegrationTest(factor
         var token = await AuthHelper.RegisterAndGetTokenAsync(Client);
         UseToken(token);
         var created = await (await Client.PostAsJsonAsync("/api/artistprofiles", FakeData.Artist()))
-            .Content.ReadFromJsonAsync<ArtistProfileDto>();
+            .Content.ReadFromJsonAsync<CreateArtistProfile.Response>();
 
         var response = await Client.GetAsync("/api/artistprofiles/me/admin");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var profile = await response.Content.ReadFromJsonAsync<AdminProfileResponseDto>();
+        var profile = await response.Content.ReadFromJsonAsync<GetMyAdminProfile.Response>();
         profile.ShouldNotBeNull();
         profile.Id.ShouldBe(created!.Id);
     }
@@ -92,16 +92,16 @@ public class ArtistProfileTests(ApiFactory factory) : BaseIntegrationTest(factor
         var token = await AuthHelper.RegisterAndGetTokenAsync(Client);
         UseToken(token);
         var created = await (await Client.PostAsJsonAsync("/api/artistprofiles", FakeData.Artist()))
-            .Content.ReadFromJsonAsync<ArtistProfileDto>();
+            .Content.ReadFromJsonAsync<CreateArtistProfile.Response>();
 
         var response = await Client.PutAsJsonAsync($"/api/artistprofiles/{created!.Id}",
-            new UpdateArtistDto("Updated Artist Name", "Updated Bio", null));
+            new UpdateArtistProfile.Command(0, "Updated Artist Name", "Updated Bio", null));
 
         response.StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
         // Verify the change persisted
         var profile = await (await Client.GetAsync($"/api/artistprofiles/{created.Id}"))
-            .Content.ReadFromJsonAsync<ArtistProfileDto>();
+            .Content.ReadFromJsonAsync<GetArtistProfileById.Response>();
         profile!.ArtistName.ShouldBe("Updated Artist Name");
     }
 
@@ -112,7 +112,7 @@ public class ArtistProfileTests(ApiFactory factory) : BaseIntegrationTest(factor
         var ownerToken = await AuthHelper.RegisterAndGetTokenAsync(Client);
         UseToken(ownerToken);
         var profile = await (await Client.PostAsJsonAsync("/api/artistprofiles", FakeData.Artist()))
-            .Content.ReadFromJsonAsync<ArtistProfileDto>();
+            .Content.ReadFromJsonAsync<CreateArtistProfile.Response>();
 
         // Attacker tries to update
         var attackerToken = await AuthHelper.RegisterAndGetTokenAsync(
@@ -120,7 +120,7 @@ public class ArtistProfileTests(ApiFactory factory) : BaseIntegrationTest(factor
         using var attackerClient = CreateClientWithToken(attackerToken);
 
         var response = await attackerClient.PutAsJsonAsync($"/api/artistprofiles/{profile!.Id}",
-            new UpdateArtistDto("Hacked", null, null));
+            new UpdateArtistProfile.Command(0, "Hacked", null, null));
 
         response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
@@ -131,7 +131,7 @@ public class ArtistProfileTests(ApiFactory factory) : BaseIntegrationTest(factor
         var token = await AuthHelper.RegisterAndGetTokenAsync(Client);
         UseToken(token);
         var created = await (await Client.PostAsJsonAsync("/api/artistprofiles", FakeData.Artist()))
-            .Content.ReadFromJsonAsync<ArtistProfileDto>();
+            .Content.ReadFromJsonAsync<CreateArtistProfile.Response>();
 
         var response = await Client.DeleteAsync($"/api/artistprofiles/{created!.Id}");
 

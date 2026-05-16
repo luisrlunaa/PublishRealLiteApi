@@ -8,7 +8,7 @@ namespace PublishRealLiteApi.Features.Teams;
 
 public static class CreateTeam
 {
-    public record Command(int ArtistProfileId, string Name);
+    public record Command(string Name);
 
     public record Response(int Id, string Name);
 
@@ -16,20 +16,26 @@ public static class CreateTeam
     {
         public Validator()
         {
-            RuleFor(x => x.ArtistProfileId).GreaterThan(0);
             RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
         }
     }
 
     public class Handler(AppDbContext db, ICurrentUserService currentUser)
     {
-        public async Task<Response> HandleAsync(Command cmd, CancellationToken ct = default)
+        public async Task<Response?> HandleAsync(Command cmd, CancellationToken ct = default)
         {
+            var userId = currentUser.UserId!;
+
+            var profile = await db.ArtistProfiles
+                .FirstOrDefaultAsync(p => p.UserId == userId && !p.IsDeleted, ct);
+
+            if (profile == null) return null;
+
             var team = new Team
             {
-                ArtistProfileId = cmd.ArtistProfileId,
+                ArtistProfileId = profile.Id,
                 Name = cmd.Name,
-                CreatedBy = currentUser.UserId
+                CreatedBy = userId
             };
 
             db.Teams.Add(team);

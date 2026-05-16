@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
-using PublishRealLiteApi.DTOs;
+using PublishRealLiteApi.Features.ArtistProfiles;
+using PublishRealLiteApi.Features.Teams;
 using PublishRealLiteApi.IntegrationTests.Helpers;
 using PublishRealLiteApi.IntegrationTests.Infrastructure;
 using Shouldly;
@@ -16,7 +17,7 @@ public class TeamsTests(ApiFactory factory) : BaseIntegrationTest(factory)
         client.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
         var profile = await (await client.PostAsJsonAsync("/api/artistprofiles", FakeData.Artist()))
-            .Content.ReadFromJsonAsync<ArtistProfileDto>();
+            .Content.ReadFromJsonAsync<CreateArtistProfile.Response>();
         return profile!.Id;
     }
 
@@ -33,10 +34,10 @@ public class TeamsTests(ApiFactory factory) : BaseIntegrationTest(factory)
     {
         await CreateUserWithProfileAsync();
 
-        var response = await Client.PostAsJsonAsync("/api/teams", new { Name = "My Band" });
+        var response = await Client.PostAsJsonAsync("/api/teams", new CreateTeam.Command("My Band"));
 
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
-        var team = await response.Content.ReadFromJsonAsync<TeamDto>();
+        var team = await response.Content.ReadFromJsonAsync<CreateTeam.Response>();
         team.ShouldNotBeNull();
         team.Id.ShouldBeGreaterThan(0);
         team.Name.ShouldBe("My Band");
@@ -46,13 +47,13 @@ public class TeamsTests(ApiFactory factory) : BaseIntegrationTest(factory)
     public async Task GetMine_AfterCreate_ReturnsTeams()
     {
         await CreateUserWithProfileAsync();
-        await Client.PostAsJsonAsync("/api/teams", new { Name = "Team A" });
-        await Client.PostAsJsonAsync("/api/teams", new { Name = "Team B" });
+        await Client.PostAsJsonAsync("/api/teams", new CreateTeam.Command("Team A"));
+        await Client.PostAsJsonAsync("/api/teams", new CreateTeam.Command("Team B"));
 
         var response = await Client.GetAsync("/api/teams/mine");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var teams = await response.Content.ReadFromJsonAsync<TeamDto[]>();
+        var teams = await response.Content.ReadFromJsonAsync<GetMyTeams.Response[]>();
         teams.ShouldNotBeNull();
         teams.Length.ShouldBe(2);
     }
@@ -61,8 +62,8 @@ public class TeamsTests(ApiFactory factory) : BaseIntegrationTest(factory)
     public async Task Invite_WithValidTeamAndEmail_ReturnsOk()
     {
         await CreateUserWithProfileAsync();
-        var team = await (await Client.PostAsJsonAsync("/api/teams", new { Name = "Collab Team" }))
-            .Content.ReadFromJsonAsync<TeamDto>();
+        var team = await (await Client.PostAsJsonAsync("/api/teams", new CreateTeam.Command("Collab Team")))
+            .Content.ReadFromJsonAsync<CreateTeam.Response>();
 
         var response = await Client.PostAsJsonAsync("/api/teams/invite",
             new { TeamId = team!.Id, Email = "invited@test.com" });
@@ -75,8 +76,8 @@ public class TeamsTests(ApiFactory factory) : BaseIntegrationTest(factory)
     {
         // Owner creates team and sends invite
         await CreateUserWithProfileAsync();
-        var team = await (await Client.PostAsJsonAsync("/api/teams", new { Name = "Joint Team" }))
-            .Content.ReadFromJsonAsync<TeamDto>();
+        var team = await (await Client.PostAsJsonAsync("/api/teams", new CreateTeam.Command("Joint Team")))
+            .Content.ReadFromJsonAsync<CreateTeam.Response>();
 
         var inviteeEmail = FakeData.Email();
         await Client.PostAsJsonAsync("/api/teams/invite",

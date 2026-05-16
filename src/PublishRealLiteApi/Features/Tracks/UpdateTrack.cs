@@ -13,7 +13,6 @@ public static class UpdateTrack
     {
         public Validator()
         {
-            RuleFor(x => x.Id).NotEmpty();
             RuleFor(x => x.Title).NotEmpty().MaximumLength(200);
             RuleFor(x => x.Position).GreaterThan(0);
         }

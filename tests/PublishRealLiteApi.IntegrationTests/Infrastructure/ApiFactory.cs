@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using PublishRealLiteApi.Common;
 using PublishRealLiteApi.Infrastructure.Data;
+using PublishRealLiteApi.Infrastructure.Services;
 
 namespace PublishRealLiteApi.IntegrationTests.Infrastructure;
 
@@ -26,9 +28,14 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
                 ["Storage:Provider"] = "Local"
             }));
 
-        // Remove background workers — irrelevant in tests and add noise
         builder.ConfigureServices(services =>
-            services.RemoveAll<IHostedService>());
+        {
+            services.RemoveAll<IHostedService>();
+            services.RemoveAll<ITurnstileService>();
+            services.RemoveAll<IEmailService>();
+            services.AddSingleton<ITurnstileService, AlwaysTrueTurnstileService>();
+            services.AddSingleton<IEmailService, NoOpEmailService>();
+        });
     }
 
     public async Task InitializeAsync()
@@ -59,5 +66,16 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
             if (!await roleManager.RoleExistsAsync(role))
                 await roleManager.CreateAsync(new IdentityRole(role));
         }
+    }
+
+    private sealed class AlwaysTrueTurnstileService : ITurnstileService
+    {
+        public Task<bool> ValidateAsync(string token) => Task.FromResult(true);
+    }
+
+    private sealed class NoOpEmailService : IEmailService
+    {
+        public Task SendInvitationEmailAsync(string email, string artistName, string inviteLink) => Task.CompletedTask;
+        public Task SendEmailAsync(string email, string subject, string htmlMessage) => Task.CompletedTask;
     }
 }
