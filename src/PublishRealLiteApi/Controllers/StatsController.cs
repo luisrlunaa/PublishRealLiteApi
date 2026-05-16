@@ -1,30 +1,28 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using PublishRealLiteApi.Application.Services.Interfaces;
-using PublishRealLiteApi.DTOs;
+using Microsoft.AspNetCore.Mvc;
+using PublishRealLiteApi.Features.Stats;
 
-namespace PublishRealLiteApi.Controllers
+namespace PublishRealLiteApi.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class StatsController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class StatsController : ControllerBase
+    [HttpGet("summary")]
+    public async Task<IActionResult> Summary(
+        [FromServices] GetStatsSummary.Handler handler,
+        [FromQuery] int range = 30)
     {
-        private readonly IStatsService _stats;
-        public StatsController(IStatsService stats) => _stats = stats;
-
-        [HttpGet("summary")]
-        public async Task<IActionResult> Summary([FromQuery] int range = 30)
-        {
-            var summary = await _stats.GetSummaryAsync(range);
-            return Ok(summary);
-        }
-
-        [HttpPost("import")]
-        public async Task<IActionResult> Import([FromBody] IEnumerable<StreamStatDto> items)
-        {
-            if (items == null || !items.Any()) return BadRequest("No data");
-            await _stats.ImportAsync(items);
-            return Ok(new { imported = items.Count() });
-        }
+        var result = await handler.HandleAsync(new GetStatsSummary.Query(range));
+        return Ok(result);
     }
 
+    [HttpPost("import")]
+    public async Task<IActionResult> Import(
+        [FromBody] List<ImportStats.StreamStatDto> items,
+        [FromServices] ImportStats.Handler handler)
+    {
+        if (items == null || items.Count == 0) return BadRequest("No data");
+        var result = await handler.HandleAsync(new ImportStats.Command(items));
+        return Ok(new { imported = result.Imported });
+    }
 }

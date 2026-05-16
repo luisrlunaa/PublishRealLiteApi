@@ -1,15 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
-using PublishRealLiteApi.Application.Services.Interfaces;
+using PublishRealLiteApi.Common;
 
-namespace PublishRealLiteApi.Controllers
+namespace PublishRealLiteApi.Controllers;
+
+public abstract class ApiControllerBase(ICurrentUserService currentUser) : ControllerBase
 {
-    public abstract class ApiControllerBase : ControllerBase
-    {
-        protected readonly ICurrentUserService CurrentUser;
-
-        protected ApiControllerBase(ICurrentUserService currentUser)
-        {
-            CurrentUser = currentUser;
-        }
-    }
+    protected readonly ICurrentUserService CurrentUser = currentUser;
 }

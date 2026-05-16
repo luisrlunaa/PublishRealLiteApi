@@ -1,28 +1,19 @@
 using Microsoft.AspNetCore.Mvc;
-using PublishRealLiteApi.Application.DTOs;
-using PublishRealLiteApi.Application.Services.Interfaces;
+using PublishRealLiteApi.Features.Applications;
 
-namespace PublishRealLiteApi.Controllers
+namespace PublishRealLiteApi.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class ApplicationsController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class ApplicationsController : ControllerBase
+    [HttpPost]
+    public async Task<IActionResult> Submit(
+        [FromBody] SubmitApplication.Command cmd,
+        [FromServices] SubmitApplication.Handler handler)
     {
-        private readonly IArtistApplicationService _applicationService;
-
-        public ApplicationsController(IArtistApplicationService applicationService)
-        {
-            _applicationService = applicationService;
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> Submit([FromBody] SubmitApplicationDto dto)
-        {
-            var success = await _applicationService.SubmitAsync(dto);
-            if (!success)
-                return BadRequest(new { message = "Something went wrong, please try again." });
-
-            return Ok();
-        }
+        var result = await handler.HandleAsync(cmd);
+        if (result == null) return BadRequest(new { message = "Something went wrong, please try again." });
+        return Ok();
     }
 }

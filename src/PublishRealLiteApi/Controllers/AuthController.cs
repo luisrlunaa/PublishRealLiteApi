@@ -1,61 +1,36 @@
-﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using PublishRealLiteApi.Application.Services.Interfaces;
-using PublishRealLiteApi.DTOs;
-using PublishRealLiteApi.Services.Interfaces;
+using PublishRealLiteApi.Features.Auth;
 
-namespace PublishRealLiteApi.Controllers
+namespace PublishRealLiteApi.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController : ControllerBase
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class AuthController : ControllerBase
+    [HttpPost("register")]
+    public async Task<IActionResult> Register(
+        [FromBody] Register.Command cmd,
+        [FromServices] Register.Handler handler)
     {
-        private readonly UserManager<IdentityUser> _userManager;
-        private readonly SignInManager<IdentityUser> _signInManager;
-        private readonly IJwtService _jwtService;
-        private readonly ITurnstileService _turnstile;
-
-        public AuthController(UserManager<IdentityUser> userManager, SignInManager<IdentityUser> signInManager, IJwtService jwtService, ITurnstileService turnstile)
+        try
         {
-            _userManager = userManager;
-            _signInManager = signInManager;
-            _jwtService = jwtService;
-            _turnstile = turnstile;
+            var result = await handler.HandleAsync(cmd);
+            if (result == null) return BadRequest(new { message = "Something went wrong, please try again." });
+            return Ok(new { result.Id, result.Email });
         }
-
-        [HttpPost("register")]
-        public async Task<IActionResult> Register([FromBody] RegisterDto dto)
+        catch (InvalidOperationException ex)
         {
-            if (!await _turnstile.ValidateAsync(dto.TurnstileToken))
-                return BadRequest(new { message = "Something went wrong, please try again." });
-
-            var user = new IdentityUser { UserName = dto.Email, Email = dto.Email };
-            var result = await _userManager.CreateAsync(user, dto.Password);
-            if (!result.Succeeded)
-            {
-                return BadRequest(result.Errors.Select(e => e.Description));
-            }
-
-            await _userManager.AddToRoleAsync(user, "Artist");
-            return Ok(new { user.Id, user.Email });
+            return BadRequest(new { message = ex.Message });
         }
+    }
 
-        [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] LoginDto dto)
-        {
-            if (!await _turnstile.ValidateAsync(dto.TurnstileToken))
-                return BadRequest(new { message = "Something went wrong, please try again." });
-
-            var user = await _userManager.FindByEmailAsync(dto.Email);
-            if (user == null) return Unauthorized("Invalid credentials");
-
-            var result = await _signInManager.CheckPasswordSignInAsync(user, dto.Password, false);
-            if (!result.Succeeded) return Unauthorized("Invalid credentials");
-
-            var roles = await _userManager.GetRolesAsync(user);
-            var token = _jwtService.GenerateToken(user, roles);
-
-            return Ok(new AuthResponseDto(token, user.Email));
-        }
+    [HttpPost("login")]
+    public async Task<IActionResult> Login(
+        [FromBody] Login.Command cmd,
+        [FromServices] Login.Handler handler)
+    {
+        var result = await handler.HandleAsync(cmd);
+        if (result == null) return Unauthorized("Invalid credentials");
+        return Ok(result);
     }
 }

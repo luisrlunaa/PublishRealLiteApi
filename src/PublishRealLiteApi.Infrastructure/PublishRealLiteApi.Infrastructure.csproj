@@ -8,7 +8,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\PublishRealLiteApi.Models\PublishRealLiteApi.Models.csproj" />
-		<ProjectReference Include="..\PublishRealLiteApi.Application\PublishRealLiteApi.Application.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>

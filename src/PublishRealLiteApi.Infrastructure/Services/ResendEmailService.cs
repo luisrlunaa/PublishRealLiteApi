@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Configuration;
-using PublishRealLiteApi.Application.Services.Interfaces;
 using Resend;
 
 namespace PublishRealLiteApi.Infrastructure.Services

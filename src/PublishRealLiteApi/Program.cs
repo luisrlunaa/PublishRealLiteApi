@@ -1,9 +1,12 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using PublishRealLiteApi.Application;
+using PublishRealLiteApi.Common;
+using PublishRealLiteApi.Features.Stats.Workers;
 using PublishRealLiteApi.Infrastructure;
 using PublishRealLiteApi.Infrastructure.Data;
 using PublishRealLiteApi.Services;
@@ -14,21 +17,12 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddHttpContextAccessor();
-
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
 
-builder.Services.AddAutoMapper(cfg =>
-{
-    cfg.AddMaps(typeof(Program).Assembly);
-    cfg.AddMaps(typeof(IApplicationMarker).Assembly);
-});
-
-// AddInfrastructure now registers ICurrentUserService internally.
 builder.Services.AddInfrastructure(builder.Configuration);
 
-// 1. Register Identity Services
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 {
     options.Password.RequireDigit = false;
@@ -40,15 +34,34 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
+// Cross-cutting services
+builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
 builder.Services.AddScoped<IUploadService, LocalUploadService>();
 builder.Services.AddSingleton<SimpleRateLimitMiddleware>();
+builder.Services.AddHttpClient<ITurnstileService, TurnstileService>();
 
 var storageProvider = builder.Configuration.GetValue<string>("Storage:Provider") ?? "Local";
 if (storageProvider.Equals("Azure", StringComparison.OrdinalIgnoreCase))
     builder.Services.AddScoped<IStorageService, AzureBlobStorageService>();
 else
     builder.Services.AddScoped<IStorageService, LocalStorageService>();
+
+// Feature handlers (auto-registered via Scrutor)
+builder.Services.Scan(scan => scan
+    .FromAssemblyOf<Program>()
+    .AddClasses(c => c.Where(t => t.Name == "Handler"))
+    .AsSelf()
+    .WithScopedLifetime());
+
+// FluentValidation
+builder.Services
+    .AddFluentValidationAutoValidation()
+    .AddValidatorsFromAssemblyContaining<Program>();
+
+// Stats worker
+builder.Services.AddHostedService<StreamStatAggregatorWorker>();
+builder.Services.AddScoped<IStreamStatAggregatorService, StreamStatAggregatorService>();
 
 var jwtSection = builder.Configuration.GetSection("JwtSettings");
 var jwtSecret = jwtSection.GetValue<string>("Secret")
@@ -92,16 +105,11 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddMemoryCache();
-builder.Services.AddHostedService<PublishRealLiteApi.Workers.StreamStatAggregatorWorker>();
-builder.Services.AddScoped<IStreamStatAggregatorService, PublishRealLiteApi.Services.StreamStatAggregatorService>();
 
 var app = builder.Build();
 
-// 🛑 ADDED THIS: This ensures you see the actual C# crash in the browser/logs during development
 if (app.Environment.IsDevelopment())
-{
     app.UseDeveloperExceptionPage();
-}
 
 app.UseStaticFiles();
 app.UseRouting();
@@ -155,13 +163,9 @@ using (var scope = app.Services.CreateScope())
         {
             var pending = db.Database.GetPendingMigrations().ToList();
             if (pending.Any())
-            {
                 db.Database.Migrate();
-            }
             else
-            {
                 logger.LogInformation("No pending migrations. DB is up-to-date.");
-            }
         }
 
         await DbSeeder.SeedAsync(services);
@@ -175,5 +179,4 @@ using (var scope = app.Services.CreateScope())
 
 app.Run();
 
-// Required for WebApplicationFactory<Program> in integration tests
 public partial class Program { }

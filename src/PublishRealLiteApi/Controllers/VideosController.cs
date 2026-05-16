@@ -1,76 +1,62 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using PublishRealLiteApi.Application.Services.Interfaces;
-using PublishRealLiteApi.DTOs;
+using Microsoft.AspNetCore.Mvc;
+using PublishRealLiteApi.Common;
+using PublishRealLiteApi.Features.Videos;
 
-namespace PublishRealLiteApi.Controllers
+namespace PublishRealLiteApi.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class VideosController(ICurrentUserService currentUser) : ApiControllerBase(currentUser)
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class VideosController : ApiControllerBase
+    [HttpGet("mine")]
+    public async Task<IActionResult> GetMine([FromServices] GetMyVideos.Handler handler)
     {
-        private readonly IArtistVideoService _service;
-        private readonly IAuthService _auth;
-        public VideosController(IArtistVideoService service, IAuthService auth, ICurrentUserService currentUser) : base(currentUser)
-        {
-            _service = service;
-            _auth = auth;
-        }
+        var result = await handler.HandleAsync(new GetMyVideos.Query());
+        if (result == null) return BadRequest("No artist profile found for current user");
+        return Ok(result);
+    }
 
-        [HttpGet("mine")]
-        public async Task<IActionResult> GetMine()
-        {
-            var userId = CurrentUser.UserId;
-            if (userId == null) return Unauthorized();
-            // Use AuthService to resolve current user's profile id
-            try
-            {
-                var profileId = await _auth.GetProfileIdAsync();
-                var videos = await _service.GetByArtistProfileIdAsync(profileId);
-                return Ok(videos);
-            }
-            catch (Exception ex)
-            {
-                return BadRequest("No artist profile found for current user");
-            }
-        }
+    [HttpGet("profile/{profileId:int}")]
+    public async Task<IActionResult> GetByProfile(
+        int profileId,
+        [FromServices] GetVideosByProfile.Handler handler)
+    {
+        var result = await handler.HandleAsync(new GetVideosByProfile.Query(profileId));
+        return Ok(result);
+    }
 
-        [HttpGet("profile/{profileId:int}")]
-        public async Task<IActionResult> GetByProfile(int profileId)
-        {
-            var videos = await _service.GetByArtistProfileIdAsync(profileId);
-            return Ok(videos);
-        }
+    [HttpPost]
+    public async Task<IActionResult> Create(
+        [FromBody] CreateVideo.Command cmd,
+        [FromServices] CreateVideo.Handler handler)
+    {
+        if (CurrentUser.UserId == null) return Unauthorized();
+        var result = await handler.HandleAsync(cmd);
+        if (result == null) return Forbid();
+        return CreatedAtAction(nameof(GetMine), new { id = result.Id }, result);
+    }
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateArtistVideoDto dto)
-        {
-            var userId = CurrentUser.UserId;
-            if (userId == null) return Unauthorized();
-            var isAdmin = CurrentUser.IsAdmin;
-            var video = await _service.CreateAsync(dto, userId!, isAdmin);
-            return CreatedAtAction(nameof(GetMine), new { id = video.Id }, video);
-        }
+    [HttpPut("{id:int}")]
+    public async Task<IActionResult> Update(
+        int id,
+        [FromBody] UpdateVideo.Command cmd,
+        [FromServices] UpdateVideo.Handler handler)
+    {
+        if (CurrentUser.UserId == null) return Unauthorized();
+        var ok = await handler.HandleAsync(cmd with { Id = id });
+        if (!ok) return Forbid();
+        return NoContent();
+    }
 
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] UpdateArtistVideoDto dto)
-        {
-            var userId = CurrentUser.UserId;
-            if (userId == null) return Unauthorized();
-            var isAdmin = CurrentUser.IsAdmin;
-            var ok = await _service.UpdateAsync(id, dto, userId!, isAdmin);
-            if (!ok) return Forbid();
-            return NoContent();
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id, [FromQuery] int artistProfileId)
-        {
-            var userId = CurrentUser.UserId;
-            if (userId == null) return Unauthorized();
-            var isAdmin = CurrentUser.IsAdmin;
-            var ok = await _service.DeleteAsync(id, userId!, isAdmin, artistProfileId);
-            if (!ok) return Forbid();
-            return NoContent();
-        }
+    [HttpDelete("{id:int}")]
+    public async Task<IActionResult> Delete(
+        int id,
+        [FromQuery] int artistProfileId,
+        [FromServices] DeleteVideo.Handler handler)
+    {
+        if (CurrentUser.UserId == null) return Unauthorized();
+        var ok = await handler.HandleAsync(new DeleteVideo.Command(id, artistProfileId));
+        if (!ok) return Forbid();
+        return NoContent();
     }
 }

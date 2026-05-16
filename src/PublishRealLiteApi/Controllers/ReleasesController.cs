@@ -1,71 +1,62 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using PublishRealLiteApi.Application.Services.Interfaces;
-using PublishRealLiteApi.DTOs;
+using PublishRealLiteApi.Common;
+using PublishRealLiteApi.Features.Releases;
 
-namespace PublishRealLiteApi.Controllers
+namespace PublishRealLiteApi.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class ReleasesController(ICurrentUserService currentUser) : ApiControllerBase(currentUser)
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class ReleasesController : ApiControllerBase
+    [HttpGet]
+    public async Task<IActionResult> GetAll(
+        [FromQuery] int artistProfileId,
+        [FromServices] GetReleases.Handler handler)
     {
-        private readonly IReleaseService _service;
-        public ReleasesController(IReleaseService service, ICurrentUserService currentUser) : base(currentUser) => _service = service;
+        var result = await handler.HandleAsync(new GetReleases.Query(artistProfileId));
+        return Ok(result);
+    }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll([FromQuery] int artistProfileId)
-        {
-            var list = Enumerable.Empty<ReleaseDto>();
-            var userId = CurrentUser.UserId;
-            var isAdmin = CurrentUser.IsAdmin;
-            if (isAdmin)
-                list = await _service.GetAllAsync(userId);
-            else
-                list = await _service.GetAllAsync(artistProfileId);
-            return Ok(list);
-        }
+    [HttpGet("{id:guid}")]
+    public async Task<IActionResult> Get(Guid id, [FromServices] GetReleaseById.Handler handler)
+    {
+        var result = await handler.HandleAsync(new GetReleaseById.Query(id));
+        if (result == null) return NotFound();
+        return Ok(result);
+    }
 
-        [HttpGet("{id:guid}")]
-        public async Task<IActionResult> Get(Guid id)
-        {
-            var r = await _service.GetByIdAsync(id);
-            if (r == null) return NotFound();
-            return Ok(r);
-        }
+    [Authorize]
+    [HttpPost]
+    public async Task<IActionResult> Create(
+        [FromBody] CreateRelease.Command cmd,
+        [FromServices] CreateRelease.Handler handler)
+    {
+        var result = await handler.HandleAsync(cmd);
+        return CreatedAtAction(nameof(Get), new { id = result.Id }, result);
+    }
 
-        [Authorize]
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateReleaseDto dto)
-        {
-            var userId = CurrentUser.UserId;
-            if (userId == null) return Unauthorized();
-            var isAdmin = CurrentUser.IsAdmin;
-            var result = await _service.CreateAsync(userId!, isAdmin, dto);
-            if (result == null) return Forbid();
-            return CreatedAtAction(nameof(Get), new { id = result.Id }, result);
-        }
+    [Authorize]
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(
+        Guid id,
+        [FromBody] UpdateRelease.Command cmd,
+        [FromServices] UpdateRelease.Handler handler)
+    {
+        var ok = await handler.HandleAsync(cmd with { Id = id });
+        if (!ok) return Forbid();
+        return NoContent();
+    }
 
-        [Authorize]
-        [HttpPut("{id:guid}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] UpdateReleaseDto dto)
-        {
-            var userId = CurrentUser.UserId;
-            if (userId == null) return Unauthorized();
-            var isAdmin = CurrentUser.IsAdmin;
-            var ok = await _service.UpdateAsync(id, userId!, isAdmin, dto);
-            if (!ok) return Forbid();
-            return NoContent();
-        }
-
-        [Authorize]
-        [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> Delete(Guid id, [FromQuery] int artistProfileId)
-        {
-            var userId = CurrentUser.UserId;
-            if (userId == null) return Unauthorized();
-            var ok = await _service.DeleteAsync(id, userId!, artistProfileId);
-            if (!ok) return Forbid();
-            return NoContent();
-        }
+    [Authorize]
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(
+        Guid id,
+        [FromQuery] int artistProfileId,
+        [FromServices] DeleteRelease.Handler handler)
+    {
+        var ok = await handler.HandleAsync(new DeleteRelease.Command(id, artistProfileId));
+        if (!ok) return Forbid();
+        return NoContent();
     }
 }

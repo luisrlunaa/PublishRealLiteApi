@@ -1,64 +1,49 @@
-﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using PublishRealLiteApi.Application.Services.Interfaces;
-using PublishRealLiteApi.Infrastructure.Data;
+using Microsoft.AspNetCore.Mvc;
+using PublishRealLiteApi.Common;
+using PublishRealLiteApi.Features.Teams;
 
-namespace PublishRealLiteApi.Controllers
+namespace PublishRealLiteApi.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class TeamsController(ICurrentUserService currentUser) : ApiControllerBase(currentUser)
 {
-    [ApiController]
-    [Route("api/[controller]")]
-    public class TeamsController : ApiControllerBase
+    [HttpGet("mine")]
+    public async Task<IActionResult> Mine([FromServices] GetMyTeams.Handler handler)
     {
-        private readonly ITeamService _teams;
-        public TeamsController(ITeamService teams, ICurrentUserService currentUser) : base(currentUser) => _teams = teams;
-
-        [HttpGet("mine")]
-        public async Task<IActionResult> Mine()
-        {
-            var userId = CurrentUser.UserId;
-            if (userId == null) return Unauthorized();
-            var profileId = await GetProfileIdForUser(userId);
-            var teams = await _teams.GetTeamsForArtistAsync(profileId);
-            return Ok(teams);
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] CreateTeamRequest req)
-        {
-            var userId = CurrentUser.UserId;
-            if (userId == null) return Unauthorized();
-            var profileId = await GetProfileIdForUser(userId);
-            var team = await _teams.CreateTeamAsync(profileId, req.Name);
-            return CreatedAtAction(nameof(Mine), new { id = team.Id }, team);
-        }
-
-        [HttpPost("invite")]
-        public async Task<IActionResult> Invite([FromBody] InviteRequest req)
-        {
-            await _teams.InviteAsync(req.TeamId, req.Email);
-            return Ok();
-        }
-
-        [HttpPost("accept")]
-        public async Task<IActionResult> Accept([FromQuery] string token)
-        {
-            var email = CurrentUser.Email ?? throw new InvalidOperationException("No email");
-            await _teams.AcceptInviteAsync(token, email);
-            return Ok();
-        }
-
-        private async Task<int> GetProfileIdForUser(string userId)
-        {
-            // implement lookup
-            using var scope = HttpContext.RequestServices.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var profile = await db.ArtistProfiles.FirstOrDefaultAsync(p => p.UserId == userId);
-            if (profile == null) throw new InvalidOperationException("No profile");
-            return profile.Id;
-        }
+        if (CurrentUser.UserId == null) return Unauthorized();
+        var result = await handler.HandleAsync(new GetMyTeams.Query());
+        if (result == null) return NotFound("No profile found");
+        return Ok(result);
     }
 
-    public class CreateTeamRequest { public string Name { get; set; } = string.Empty; }
-    public class InviteRequest { public int TeamId { get; set; } public string Email { get; set; } = string.Empty; }
+    [HttpPost]
+    public async Task<IActionResult> Create(
+        [FromBody] CreateTeam.Command cmd,
+        [FromServices] CreateTeam.Handler handler)
+    {
+        if (CurrentUser.UserId == null) return Unauthorized();
+        var result = await handler.HandleAsync(cmd);
+        if (result == null) return BadRequest("No profile found");
+        return CreatedAtAction(nameof(Mine), new { id = result.Id }, result);
+    }
 
+    [HttpPost("invite")]
+    public async Task<IActionResult> Invite(
+        [FromBody] InviteTeamMember.Command cmd,
+        [FromServices] InviteTeamMember.Handler handler)
+    {
+        await handler.HandleAsync(cmd);
+        return Ok();
+    }
+
+    [HttpPost("accept")]
+    public async Task<IActionResult> Accept(
+        [FromQuery] string token,
+        [FromServices] AcceptTeamInvite.Handler handler)
+    {
+        var email = CurrentUser.Email ?? throw new InvalidOperationException("No email");
+        await handler.HandleAsync(new AcceptTeamInvite.Command(token, email));
+        return Ok();
+    }
 }
